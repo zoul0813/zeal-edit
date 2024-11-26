@@ -1,0 +1,5 @@
+/bin
+/release
+/tmp
+assets/*.zt[spm]
+*.tiled-session
