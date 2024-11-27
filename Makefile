@@ -8,7 +8,7 @@
 ##
 
 # Specify the name of the output binary.
-BIN=text.bin
+BIN=edit.bin
 
 # Specify the directory containing the source files.
 # INPUT_DIR=src
