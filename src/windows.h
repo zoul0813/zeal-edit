@@ -6,7 +6,8 @@ void window_box(unsigned char left, unsigned char top, unsigned char right, unsi
 
 void window_putc(char c);
 void window_puts(const char* s);
-
+unsigned char window_wherex(void);
+unsigned char window_wherey(void);
 
 /* Where does this belong? */
 void text_banner(unsigned char x, unsigned char y, unsigned char centered, const char* s);

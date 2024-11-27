@@ -51,32 +51,32 @@
 // #define CH_DELCHR       0xFE   /* delete char under the cursor */
 // #define CH_ENTER        0x9B
 #define CH_NEWLINE      0x0A
-// #define CH_ESC          0x1B
-// #define CH_CURS_UP      28
-// #define CH_CURS_DOWN    29
-// #define CH_CURS_LEFT    30
-// #define CH_CURS_RIGHT   31
+#define CH_ESC          0xF0
+#define CH_CURS_UP      0xA0
+#define CH_CURS_DOWN    0xA1
+#define CH_CURS_LEFT    0xA2
+#define CH_CURS_RIGHT   0xA3
 
-// #define CH_TAB          0x7F   /* tabulator */
+#define CH_TAB          0x09   /* tabulator */
 // #define CH_EOL          0x9B   /* end-of-line marker */
 // #define CH_CLR          0x7D   /* clear screen */
 // #define CH_BEL          0xFD   /* bell */
-// #define CH_DEL          0x7E   /* back space (delete char to the left) */
+#define CH_DEL          0x9C   /* back space (delete char to the left) */
 // #define CH_RUBOUT       0x7E   /* back space (old, deprecated) */
 // #define CH_DELLINE      0x9C   /* delete line */
 // #define CH_INSLINE      0x9D   /* insert line */
 
 // /* These are defined to be Atari + NumberKey */
-// #define CH_F1           177
-// #define CH_F2           178
-// #define CH_F3           179
-// #define CH_F4           180
-// #define CH_F5           181
-// #define CH_F6           182
-// #define CH_F7           183
-// #define CH_F8           184
-// #define CH_F9           185
-// #define CH_F10          176
+#define CH_F1           0xF1
+#define CH_F2           0xF2
+#define CH_F3           0xF3
+#define CH_F4           0xF4
+#define CH_F5           0xF5
+#define CH_F6           0xF6
+#define CH_F7           0xF7
+#define CH_F8           0xF8
+#define CH_F9           0xF9
+#define CH_F10          0xFA
 
 #define CH_ULCORNER     0xDA // Top Left
 #define CH_URCORNER     0xBF // Top Right
@@ -111,78 +111,78 @@
 
 // #define KEY_NONE        ((unsigned char) 0xFF)
 
-// #define KEY_0           ((unsigned char) 0x32)
-// #define KEY_1           ((unsigned char) 0x1F)
-// #define KEY_2           ((unsigned char) 0x1E)
-// #define KEY_3           ((unsigned char) 0x1A)
-// #define KEY_4           ((unsigned char) 0x18)
-// #define KEY_5           ((unsigned char) 0x1D)
-// #define KEY_6           ((unsigned char) 0x1B)
-// #define KEY_7           ((unsigned char) 0x33)
-// #define KEY_8           ((unsigned char) 0x35)
-// #define KEY_9           ((unsigned char) 0x30)
+#define KEY_0           ((unsigned char) 0x30)
+#define KEY_1           ((unsigned char) 0x31)
+#define KEY_2           ((unsigned char) 0x32)
+#define KEY_3           ((unsigned char) 0x33)
+#define KEY_4           ((unsigned char) 0x34)
+#define KEY_5           ((unsigned char) 0x35)
+#define KEY_6           ((unsigned char) 0x36)
+#define KEY_7           ((unsigned char) 0x37)
+#define KEY_8           ((unsigned char) 0x38)
+#define KEY_9           ((unsigned char) 0x39)
 
-// #define KEY_A           ((unsigned char) 0x3F)
-// #define KEY_B           ((unsigned char) 0x15)
-// #define KEY_C           ((unsigned char) 0x12)
-// #define KEY_D           ((unsigned char) 0x3A)
-// #define KEY_E           ((unsigned char) 0x2A)
-// #define KEY_F           ((unsigned char) 0x38)
-// #define KEY_G           ((unsigned char) 0x3D)
-// #define KEY_H           ((unsigned char) 0x39)
-// #define KEY_I           ((unsigned char) 0x0D)
-// #define KEY_J           ((unsigned char) 0x01)
-// #define KEY_K           ((unsigned char) 0x05)
-// #define KEY_L           ((unsigned char) 0x00)
-// #define KEY_M           ((unsigned char) 0x25)
-// #define KEY_N           ((unsigned char) 0x23)
-// #define KEY_O           ((unsigned char) 0x08)
-// #define KEY_P           ((unsigned char) 0x0A)
-// #define KEY_Q           ((unsigned char) 0x2F)
-// #define KEY_R           ((unsigned char) 0x28)
-// #define KEY_S           ((unsigned char) 0x3E)
-// #define KEY_T           ((unsigned char) 0x2D)
-// #define KEY_U           ((unsigned char) 0x0B)
-// #define KEY_V           ((unsigned char) 0x10)
-// #define KEY_W           ((unsigned char) 0x2E)
-// #define KEY_X           ((unsigned char) 0x16)
-// #define KEY_Y           ((unsigned char) 0x2B)
-// #define KEY_Z           ((unsigned char) 0x17)
+#define KEY_A           ((unsigned char) 0x61)
+#define KEY_B           ((unsigned char) 0x62)
+#define KEY_C           ((unsigned char) 0x63)
+#define KEY_D           ((unsigned char) 0x64)
+#define KEY_E           ((unsigned char) 0x65)
+#define KEY_F           ((unsigned char) 0x66)
+#define KEY_G           ((unsigned char) 0x67)
+#define KEY_H           ((unsigned char) 0x68)
+#define KEY_I           ((unsigned char) 0x69)
+#define KEY_J           ((unsigned char) 0x6A)
+#define KEY_K           ((unsigned char) 0x6B)
+#define KEY_L           ((unsigned char) 0x6C)
+#define KEY_M           ((unsigned char) 0x6D)
+#define KEY_N           ((unsigned char) 0x6E)
+#define KEY_O           ((unsigned char) 0x6F)
+#define KEY_P           ((unsigned char) 0x70)
+#define KEY_Q           ((unsigned char) 0x71)
+#define KEY_R           ((unsigned char) 0x72)
+#define KEY_S           ((unsigned char) 0x73)
+#define KEY_T           ((unsigned char) 0x74)
+#define KEY_U           ((unsigned char) 0x75)
+#define KEY_V           ((unsigned char) 0x76)
+#define KEY_W           ((unsigned char) 0x77)
+#define KEY_X           ((unsigned char) 0x78)
+#define KEY_Y           ((unsigned char) 0x79)
+#define KEY_Z           ((unsigned char) 0x7A)
 
-// #define KEY_COMMA       ((unsigned char) 0x20)
-// #define KEY_PERIOD      ((unsigned char) 0x22)
-// #define KEY_SLASH       ((unsigned char) 0x26)
-// #define KEY_SEMICOLON   ((unsigned char) 0x02)
-// #define KEY_PLUS        ((unsigned char) 0x06)
-// #define KEY_ASTERISK    ((unsigned char) 0x07)
-// #define KEY_DASH        ((unsigned char) 0x0E)
-// #define KEY_EQUALS      ((unsigned char) 0x0F)
+#define KEY_COMMA       ((unsigned char) 0x2C)
+#define KEY_PERIOD      ((unsigned char) 0x2E)
+#define KEY_SLASH       ((unsigned char) 0x2F)
+#define KEY_SEMICOLON   ((unsigned char) 0x3B)
+#define KEY_PLUS        ((unsigned char) 0x8C)
+#define KEY_ASTERISK    ((unsigned char) 0xA4)
+#define KEY_DASH        ((unsigned char) 0x2D)
+#define KEY_EQUALS      ((unsigned char) 0x3D)
 // #define KEY_LESSTHAN    ((unsigned char) 0x36)
 // #define KEY_GREATERTHAN ((unsigned char) 0x37)
 
-// #define KEY_ESC         ((unsigned char) 0x1C)
-// #define KEY_TAB         ((unsigned char) 0x2C)
+#define KEY_ESC         ((unsigned char) 0xF0)
+#define KEY_TAB         ((unsigned char) 0x09)
 #define KEY_SPACE       ((unsigned char) 0x20)
-// #define KEY_RETURN      ((unsigned char) 0x0C)
-// #define KEY_DELETE      ((unsigned char) 0x34)
-// #define KEY_CAPS        ((unsigned char) 0x3C)
+#define KEY_RETURN      ((unsigned char) 0x0A)
+#define KEY_DELETE      ((unsigned char) 0x9C)
+#define KEY_CAPS        ((unsigned char) 0x92)
 // #define KEY_INVERSE     ((unsigned char) 0x27)
 // #define KEY_HELP        ((unsigned char) 0x11)
 
 // /* Function keys only exist on the 1200XL model. */
-// #define KEY_F1          ((unsigned char) 0x03)
-// #define KEY_F2          ((unsigned char) 0x04)
-// #define KEY_F3          ((unsigned char) 0x13)
-// #define KEY_F4          ((unsigned char) 0x14)
+#define KEY_F1          ((unsigned char) 0xF1)
+#define KEY_F2          ((unsigned char) 0xF2)
+#define KEY_F3          ((unsigned char) 0xF3)
+#define KEY_F4          ((unsigned char) 0xF4)
 
 // /* N.B. Cannot read Ctrl key alone */
-// #define KEY_CTRL        ((unsigned char) 0x80)
+#define KEY_CTRL        ((unsigned char) 0x98)
 
 // /* N.B. Cannot read Shift key alone via KBCODE;
 // ** instead, check "Shfit key press" bit of SKSTAT register.
 // ** Also, no way to tell left Shift from right Shift.
 // */
-// #define KEY_SHIFT       ((unsigned char) 0x40)
+#define KEY_SHIFT       ((unsigned char) 0x96)
 
 
 // /* Composed keys
@@ -211,10 +211,10 @@
 // #define KEY_CLEAR               (KEY_LESSTHAN | KEY_SHIFT)
 // #define KEY_INSERT              (KEY_GREATERTHAN | KEY_SHIFT)
 
-// #define KEY_UP      (KEY_DASH | KEY_CTRL)
-// #define KEY_DOWN    (KEY_EQUALS | KEY_CTRL)
-// #define KEY_LEFT    (KEY_PLUS | KEY_CTRL)
-// #define KEY_RIGHT   (KEY_ASTERISK | KEY_CTRL)
+#define KEY_UP      0xA0 //(KEY_DASH | KEY_CTRL)
+#define KEY_DOWN    0xA1 //(KEY_EQUALS | KEY_CTRL)
+#define KEY_LEFT    0xA2 //(KEY_PLUS | KEY_CTRL)
+#define KEY_RIGHT   0xA3 //(KEY_ASTERISK | KEY_CTRL)
 
 
 // /*****************************************************************************/

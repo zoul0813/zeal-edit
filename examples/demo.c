@@ -3,7 +3,7 @@
 #include "conio.h"
 #include "windows.h"
 
-void demo(void) {
+void main(void) {
   unsigned char width, height;
   screensize(&width, &height);
 

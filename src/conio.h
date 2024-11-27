@@ -145,6 +145,12 @@ unsigned char /* __fastcall__ */ cursor (unsigned char onoff);
 ** function returns the old cursor setting.
 */
 
+void cursor_set(unsigned char c);
+/* Set the cursor character to c */
+
+void cursor_mode(unsigned char m);
+/* Set the cursor mode to m */
+
 unsigned char /* __fastcall__ */ revers (unsigned char onoff);
 /* Enable/disable reverse character display. This may not be supported by
 ** the output device. Return the old setting.

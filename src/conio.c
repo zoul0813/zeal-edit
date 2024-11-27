@@ -11,7 +11,8 @@
 #include "conio.h"
 
 // DIRTY: trick to align key_buffer
-static unsigned char __array[32 + 31] = { 0x00 };
+#define KB_BUFFER_SIZE  32
+static unsigned char __array[KB_BUFFER_SIZE + (KB_BUFFER_SIZE - 1)] = { 0x00 };
 static unsigned char* __key_buffer;
 
 zos_err_t __kb_flush(void) {
@@ -50,6 +51,8 @@ void clr_color(unsigned char c) {
   screensize(&width, &height);
   gotoxy(0,0);
   for(unsigned char y = 0; y < height; y++) {
+    zvb_peri_text_curs_x = 0;
+    zvb_peri_text_curs_y = y;
     for(unsigned char x = 0; x < width; x++) {
       zvb_peri_text_print_char = KEY_SPACE;
     }
@@ -110,7 +113,11 @@ void cputcxy (unsigned char x, unsigned char y, char c) {
 
 /* Output a NUL-terminated string at the current cursor position */
 void cputs (const char* s) {
-  puts(s);
+  // puts(s);
+  for(int i = 0; i < 256; i++) {
+    if(s[i] == 0x00) break;
+    zvb_peri_text_print_char = s[i];
+  }
 }
 
 /* Same as "gotoxy (x, y); puts (s); */
@@ -140,14 +147,13 @@ char cgetc (void) {
   // unsigned char i = 0;
   unsigned char c = 0x00;
   do {
-    uint16_t size = sizeof(__key_buffer);
+    uint16_t size = KB_BUFFER_SIZE;
     zos_err_t err = read(DEV_STDIN, __key_buffer, &size);
     if(err != ERR_SUCCESS) {
       printf("keyboard error: %d (%02x)\n", err, err);
       exit(err);
     }
 
-    gotoxy(0, 30);
     if(size > 0) {
       for(uint16_t i = 0; i < size; i++) {
         c = __key_buffer[i];
@@ -211,6 +217,16 @@ unsigned char cursor (unsigned char onoff) {
   zvb_peri_text_curs_time = onoff ? DEFAULT_CURSOR : 0;
 
   return _return;
+}
+
+/* Set the cursor character to c */
+void cursor_set(unsigned char c) {
+  zvb_peri_text_curs_char = c;
+}
+
+/* Set the cursor mode to m - refer to zvb_hardware.h for ZVB_PERI_TEXT_CTRL modes */
+void cursor_mode(unsigned char m) {
+  zvb_peri_text_ctrl = m;
 }
 
 // /* Enable/disable reverse character display. This may not be supported by

@@ -13,6 +13,7 @@ static unsigned char window_right = 0;
 static unsigned char window_bottom = 0;
 static unsigned char window_x = 0;
 static unsigned char window_y = 0;
+static unsigned char window_offset = 0;
 
 void window(unsigned char left, unsigned char top, unsigned char right, unsigned char bottom) {
   window_left = left;
@@ -72,6 +73,7 @@ void window_box(unsigned char left, unsigned char top, unsigned char right, unsi
     window_putc(CH_VLINE);
   }
 
+  window_offset = 1;
   window_left++;
   window_top++;
   window_right--;
@@ -80,27 +82,37 @@ void window_box(unsigned char left, unsigned char top, unsigned char right, unsi
   window_y = window_top;
 }
 
+unsigned char window_wherex(void) {
+  return window_x;
+}
+
+unsigned char window_wherey(void) {
+  return window_y;
+}
 
 void window_putc(char c) {
-  // unsigned char current_x = zvb_peri_text_curs_x;
-  // unsigned char current_y = zvb_peri_text_curs_x;
-
   switch(c) {
     case CH_NEWLINE:
       window_y++;
       window_x = window_left;
       break;
+    case CH_TAB:
+      unsigned char tab_width = (window_x - window_offset) % 4;
+      if(tab_width == 0) tab_width = 4;
+      gotoxy(window_x, window_y);
+      for(unsigned char i = 0; i < tab_width; i++) {
+        cputc(' ');
+      }
+      // cputsxy(window_x, window_y, "    ");
+      window_x += tab_width;
+      break;
     default:
       cputcxy(window_x, window_y, c);
+      window_x++;
   }
 
-
-  window_x++;
   if(window_x > window_right) { window_x = window_left; window_y++; }
   // we can't do anything about vertical overflow, so just let it happen
-
-  // // reset the cursor
-  // gotoxy(current_x, current_y);
 }
 
 void window_puts(const char* s) {
