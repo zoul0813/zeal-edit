@@ -17,7 +17,7 @@ static unsigned char* __key_buffer;
 
 zos_err_t __kb_flush(void) {
   /* Flush the keyboard fifo */
-  uint16_t size = sizeof(__key_buffer);
+  uint16_t size = KB_BUFFER_SIZE;
   while (size) {
     zos_err_t err = read(DEV_STDIN, __key_buffer, &size);
     if(err != ERR_SUCCESS) return err;
