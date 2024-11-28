@@ -1,13 +1,45 @@
+#include <stdint.h>
 #include "conio.h"
 
-void window(unsigned char left, unsigned char top, unsigned char right, unsigned char bottom);
-void window_color(unsigned char left, unsigned char top, unsigned char right, unsigned char bottom, unsigned char color);
-void window_box(unsigned char left, unsigned char top, unsigned char right, unsigned char bottom);
+#define SCREEN_COL80_WIDTH  80
+#define SCREEN_COL80_HEIGHT 40
+#define SCREEN_COL40_WIDTH  40
+#define SCREEN_COL40_HEIGHT 20
 
-void window_putc(char c);
-void window_puts(const char* s);
-unsigned char window_wherex(void);
-unsigned char window_wherey(void);
+typedef enum {
+  WIN_NONE      = 0,
+  WIN_BORDER    = 1 << 0,
+  WIN_SHADOW    = 1 << 1,
+} WindowFlags;
+
+typedef struct {
+  uint8_t pos_x;
+  uint8_t pos_y;
+  uint8_t offset;
+} _window_attrs_t;
+
+typedef struct {
+  uint8_t x;
+  uint8_t y;
+  uint8_t w;
+  uint8_t h;
+  uint8_t fg;
+  uint8_t bg;
+  uint8_t flags;
+  const char* title;
+  /* private */
+  _window_attrs_t _attrs;
+} window_t;
+
+// void window(unsigned char left, unsigned char top, unsigned char right, unsigned char bottom);
+void window(window_t* window);
+// void window_color(unsigned char left, unsigned char top, unsigned char right, unsigned char bottom, unsigned char color);
+// void window_box(unsigned char left, unsigned char top, unsigned char right, unsigned char bottom);
+
+void window_putc(window_t* window, char c);
+void window_puts(window_t* window, const char* s);
+unsigned char window_wherex(window_t* window);
+unsigned char window_wherey(window_t* window);
 
 /* Where does this belong? */
 void text_banner(unsigned char x, unsigned char y, unsigned char centered, const char* s);
@@ -15,4 +47,4 @@ void text_header(unsigned char x, unsigned char y, const char* s);
 void text_menu(unsigned char x, unsigned char y, const char* items);
 
 
-void window_banner(unsigned char x, unsigned char y, unsigned char centered, const char* s);
+void window_banner(window_t* window, unsigned char x, unsigned char y, unsigned char centered, const char* s);
