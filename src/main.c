@@ -26,10 +26,18 @@ int main(int argc, char** argv) {
 
   err = ERR_SUCCESS;
 
+  // clrscr();
+  // cputs("This is just an example of a long string of text.");
+  // gotoxy(5, 0);
+  // cputs("That was a good");
+  // clreol();
+  // while(!cgetc()) {}
+  // exit(0);
+
   // demo();
   edit(argv[0]);
 
   // reset the screen
-  ioctl(DEV_STDOUT, CMD_RESET_SCREEN, NULL);
+  err = ioctl(DEV_STDOUT, CMD_RESET_SCREEN, NULL);
   return err;
 }

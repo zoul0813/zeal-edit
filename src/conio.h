@@ -63,10 +63,20 @@
 /*                                 Functions                                 */
 /*****************************************************************************/
 
+#define VIDEO_MODE_HIGH ZVB_CTRL_VID_MODE_TEXT_640
+#define VIDEO_MODE_LOW  ZVB_CTRL_VID_MODE_TEXT_320
+#ifndef VIDEO_MODE
+#define VIDEO_MODE VIDEO_MODE_HIGH
+#endif
 
+void highvideo(void);
+void lowvideo(void);
 
 void clrscr (void);
 /* Clear the whole screen and put the cursor into the top left corner */
+
+void clreol (void);
+/* Clear to the end of line */
 
 void clr_color(unsigned char c);
 /* Clear the screen with a specified bgcolor */

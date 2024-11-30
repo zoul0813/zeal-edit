@@ -38,10 +38,36 @@ zos_err_t __kb_mode(unsigned char mode) {
   return err;
 }
 
+void highvideo(void) {
+  zvb_ctrl_video_mode = ZVB_CTRL_VID_MODE_TEXT_640;
+}
+
+void lowvideo(void) {
+  zvb_ctrl_video_mode = ZVB_CTRL_VID_MODE_TEXT_320;
+}
 
 /* Clear the whole screen and put the cursor into the top left corner */
 void clrscr(void) {
   zos_err_t err = ioctl(DEV_STDOUT, CMD_CLEAR_SCREEN, NULL);
+  // zvb_peri_text_curs_x = 0;
+  // zvb_peri_text_curs_y = 0;
+}
+
+/* Clear to the end of line, and put cursor on left of next line */
+void clreol (void) {
+  unsigned char x = zvb_peri_text_curs_x;
+  unsigned char y = zvb_peri_text_curs_y;
+  unsigned char width, height;
+  unsigned char i = x;
+
+  screensize(&width, &height);
+
+  for(i = x; i < width; i++) {
+    zvb_peri_text_print_char = ' ';
+  }
+
+  zvb_peri_text_curs_x = 0;
+  zvb_peri_text_curs_y = y + 1;
 }
 
 /* Clear the screen with a specified bgcolor */

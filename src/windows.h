@@ -31,13 +31,15 @@ typedef struct {
   _window_attrs_t _attrs;
 } window_t;
 
-// void window(unsigned char left, unsigned char top, unsigned char right, unsigned char bottom);
 void window(window_t* window);
-// void window_color(unsigned char left, unsigned char top, unsigned char right, unsigned char bottom, unsigned char color);
-// void window_box(unsigned char left, unsigned char top, unsigned char right, unsigned char bottom);
+void window_gotox(window_t* window, unsigned char x);
+void window_gotoy(window_t* window, unsigned char y);
+void window_gotoxy(window_t* window, unsigned char x, unsigned char y);
+void window_clrscr(window_t *window);
+void window_clreol(window_t *window);
 
-void window_putc(window_t* window, char c);
-void window_puts(window_t* window, const char* s);
+unsigned char window_putc(window_t* window, char c);
+unsigned char window_puts(window_t* window, const char* s);
 unsigned char window_wherex(window_t* window);
 unsigned char window_wherey(window_t* window);
 

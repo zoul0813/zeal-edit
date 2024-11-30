@@ -76,53 +76,71 @@ void window(window_t* window) {
   cursor(cur);
 }
 
-/*
-void window_box(unsigned char left, unsigned char top, unsigned char right, unsigned char bottom) {
-  window(left, top, right, bottom);
-
-  // draw a box
-  cputcxy(window_left, window_top, CH_ULCORNER);
-  cputcxy(window_right, window_top, CH_URCORNER);
-  cputcxy(window_left, window_bottom, CH_LLCORNER);
-  cputcxy(window_right, window_bottom, CH_LRCORNER);
-
-  unsigned char width = window_right - window_left;
-  unsigned char height = window_bottom - window_top;
-
-  window_y = window_top;
-  window_x = window_left + 1;
-  for(unsigned char x = 0; x <= width - 2; x++) {
-    window_putc(CH_HLINE);
-  }
-
-  window_y = window_bottom;
-  window_x = window_left + 1;
-  for(unsigned char x = 0; x <= width - 2; x++) {
-    window_putc(CH_HLINE);
-  }
-
-  window_y = window_top + 1;
-  for(unsigned char y = 0; y <= height - 2; y++) {
-    window_x = window_left;
-    window_putc(CH_VLINE);
-    window_y++;
-  }
-
-  window_y = window_top + 1;
-  for(unsigned char y = 0; y <= height - 2; y++) {
-    window_x = window_right;
-    window_putc(CH_VLINE);
-  }
-
-  window_offset = 1;
-  window_left++;
-  window_top++;
-  window_right--;
-  window_bottom++;
-  window_x = window_left;
-  window_y = window_top;
+void window_gotox(window_t* window, unsigned char x) {
+  window->_attrs.pos_x = window->x + x + window->_attrs.offset;
 }
-*/
+
+void window_gotoy(window_t* window, unsigned char y) {
+  window->_attrs.pos_y = window->y + y + window->_attrs.offset;
+}
+void window_gotoxy(window_t* window, unsigned char x, unsigned char y) {
+  window->_attrs.pos_x = window->x + x + window->_attrs.offset;
+  window->_attrs.pos_y = window->y + y + window->_attrs.offset;
+}
+
+void window_clrscr(window_t *window) {
+  unsigned char current_x = window->_attrs.pos_x;
+  unsigned char current_y = window->_attrs.pos_y;
+  unsigned char current_color = zvb_peri_text_color;
+
+  textcolor(window->fg);
+  bgcolor(window->bg);
+
+  unsigned char max_w = window->w - (window->_attrs.offset * 2);
+  unsigned char max_h = window->h - (window->_attrs.offset * 2);
+  unsigned char lines = 0;
+
+  window_gotoxy(window, 0, 0);
+  zvb_peri_text_curs_x = window->_attrs.pos_x;
+  zvb_peri_text_curs_y = window->_attrs.pos_y;
+
+  for(unsigned char y = 0; y < max_h; y++) {
+    for(unsigned char x = 0; x < max_w; x++) {
+      zvb_peri_text_print_char = ' ';
+    }
+    zvb_peri_text_curs_x = window->x + window->_attrs.offset;
+    zvb_peri_text_curs_y += 1;
+  }
+
+  // reset color
+  zvb_peri_text_color = current_color;
+  window->_attrs.pos_x = current_x;
+  window->_attrs.pos_y = current_y;
+  zvb_peri_text_curs_x = current_x;
+  zvb_peri_text_curs_y = current_y;
+}
+
+void window_clreol(window_t *window) {
+  unsigned char current_color = zvb_peri_text_color;
+
+  textcolor(window->fg);
+  bgcolor(window->bg);
+
+  zvb_peri_text_curs_x = window->_attrs.pos_x;
+  zvb_peri_text_curs_y = window->_attrs.pos_y;
+
+  unsigned char max_w = window->w - window->_attrs.offset;
+  for(unsigned char x = window->_attrs.pos_x; x < max_w; x++) {
+    zvb_peri_text_print_char = ' ';
+  }
+
+  // reset color
+  zvb_peri_text_color = current_color;
+  window->_attrs.pos_x = window->x + window->_attrs.offset;
+  window->_attrs.pos_y++;
+  zvb_peri_text_curs_x = window->_attrs.pos_x;
+  zvb_peri_text_curs_y = window->_attrs.pos_y;
+}
 
 unsigned char window_wherex(window_t* window) {
   return window->_attrs.pos_x - window->_attrs.offset;
@@ -132,7 +150,7 @@ unsigned char window_wherey(window_t* window) {
   return window->_attrs.pos_y - window->_attrs.offset;
 }
 
-void window_putc(window_t* window, char c) {
+unsigned char window_putc(window_t* window, char c) {
   //save color
   unsigned char current_color = zvb_peri_text_color;
 
@@ -142,10 +160,13 @@ void window_putc(window_t* window, char c) {
   zvb_peri_text_curs_x = window->_attrs.pos_x;
   zvb_peri_text_curs_y = window->_attrs.pos_y;
 
+  unsigned char lines = 0;
+
   switch(c) {
     case CH_NEWLINE:
       window->_attrs.pos_y++;
       window->_attrs.pos_x = window->x + window->_attrs.offset;
+      lines++;
       break;
     case CH_TAB:
       unsigned char tab_width = (window->_attrs.pos_x - window->_attrs.offset) % 4;
@@ -163,19 +184,24 @@ void window_putc(window_t* window, char c) {
   if(window->_attrs.pos_x > ((window->x + window->w - 1) - window->_attrs.offset)) {
     window->_attrs.pos_x = window->x + window->_attrs.offset;
     window->_attrs.pos_y++;
+    lines++;
   }
   // we can't do anything about vertical overflow, so just let it happen
 
   // reset color
   zvb_peri_text_color = current_color;
+
+  return lines;
 }
 
-void window_puts(window_t* window, const char* s) {
+unsigned char window_puts(window_t* window, const char* s) {
   // TODO: arbitrary 256 byte max length?
+  unsigned char lines = 0;
   for(int i = 0; i < 256; i++) {
     if(s[i] == 0x00) break;
-    window_putc(window, s[i]);
+    lines += window_putc(window, s[i]);
   }
+  return lines;
 }
 
 void _text_banner(unsigned char x, unsigned char y, unsigned char centered, window_t* window, const char* s) {

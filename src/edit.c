@@ -1,3 +1,5 @@
+// #define VIDEO_MODE VIDEO_MODE_LOW
+
 #include <stdio.h>
 #include <string.h>
 #include <zos_keyboard.h>
@@ -11,11 +13,15 @@
 #include "edit.h"
 /** Fake Edit.com Interface */
 
-#define CHUNK_SIZE  1024
 
+#define CHUNK_SIZE      1024
 #define DOCUMENT_X      0
 #define DOCUMENT_Y      1
+#if (VIDEO_MODE == VIDEO_MODE_LOW)
+#define DOCUMENT_LINES  SCREEN_COL40_HEIGHT - DOCUMENT_Y - 2
+#else
 #define DOCUMENT_LINES  SCREEN_COL80_HEIGHT - DOCUMENT_Y - 2
+#endif
 
 static unsigned char width = 0, height = 0;
 static unsigned char cursor_x = 0, cursor_y = 0;
@@ -30,8 +36,13 @@ static uint16_t buffer_top = 0;
 static window_t winDocument = {
   .x = DOCUMENT_X,
   .y = DOCUMENT_Y,
+#if (VIDEO_MODE == VIDEO_MODE_LOW)
+  .w = SCREEN_COL40_WIDTH,
+  .h = SCREEN_COL40_HEIGHT - DOCUMENT_Y,
+#else
   .w = SCREEN_COL80_WIDTH,
   .h = SCREEN_COL80_HEIGHT - DOCUMENT_Y,
+#endif
   .fg = TEXT_COLOR_WHITE,
   .bg = TEXT_COLOR_DARK_BLUE,
   .flags = WIN_BORDER,
@@ -91,15 +102,22 @@ void draw_bottomenu(void) {
 }
 
 void draw_document(void) {
-  window(&winDocument);
-
+  // window_clrscr(&winDocument);
+  window_gotoxy(&winDocument, 0, 0);
   uint16_t i = buffer_top;
   buffer_position = buffer_top;
   unsigned char cur = cursor(0);
+  unsigned char lines = 0;
   for(i = buffer_position; i < filesize; i++) {
     char c = file_buffer[i];
-    window_putc(&winDocument, c);
-    if(window_wherey(&winDocument) > DOCUMENT_LINES) break;
+    if(c == '\n') {
+      window_clreol(&winDocument);
+      lines++;
+    } else {
+      lines += window_putc(&winDocument, c);
+    }
+    if(lines >= DOCUMENT_LINES) break;
+    // if(window_wherey(&winDocument) > DOCUMENT_LINES) break;
   }
   cursor(cur);
   if(i < filesize) buffer_position = i;
@@ -131,6 +149,11 @@ void draw_dialog(void) {
 
 void redraw(void) {
   draw_topmenu();
+  window(&winDocument);
+  draw_document();
+}
+
+void refresh(void) {
   draw_document();
 }
 
@@ -152,42 +175,42 @@ unsigned char edit_loop(void) {
         meta_open ^= 1;
         redraw();
         break;
-      case KB_HOME:
+      case KB_HOME: // document top
         buffer_top = 0;
-        redraw();
+        refresh();
         break;
-      case KB_END: {
+      case KB_END: { // document bottom
         buffer_top = filesize;
         unsigned char i = 0;
         uint16_t top = 0;
         for(i = 0; i < DOCUMENT_LINES; i++) {
           buffer_top = previous_line_start();
         }
-        redraw();
+        refresh();
       } break;
       case KB_PG_UP: {
         unsigned char i = 0;
         for(i = 0; i < DOCUMENT_LINES; i++) {
           buffer_top = previous_line_start();
         }
-        redraw();
+        refresh();
       } break;
       case KB_PG_DOWN:
         buffer_top = buffer_position + 1;
-        redraw();
+        refresh();
         break;
       case KB_UP_ARROW:
         if(cursor_y >= 1) cursor_y--;
         else if(buffer_top > 0) {
           buffer_top = previous_line_start();
-          redraw();
+          refresh();
         }
         break;
       case KB_DOWN_ARROW:
         if(cursor_y < (height - 1 - (DOCUMENT_Y + 2))) cursor_y++;
         else if(buffer_position < filesize) {
           buffer_top = next_line_start();
-          redraw();
+          refresh();
         }
         break;
       case KB_LEFT_ARROW:
@@ -209,6 +232,12 @@ unsigned char edit_loop(void) {
 void edit(const char* path) {
   filename = path;
   winDocument.title = path;
+
+#if (VIDEO_MODE == VIDEO_MODE_LOW)
+  lowvideo();
+#else
+  highvideo();
+#endif
 
   zos_dev_t dev = open(path, O_RDONLY);
   if(dev < 0) {
@@ -234,8 +263,8 @@ void edit(const char* path) {
 
   clr_color(TEXT_COLOR_DARK_BLUE);
 
-  cursor(1);
   cursor_set(177);
+  cursor(1);
 
   redraw();
 
