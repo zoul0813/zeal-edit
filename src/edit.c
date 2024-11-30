@@ -261,9 +261,9 @@ void edit(const char* path) {
 
   screensize(&width, &height);
 
-  clr_color(TEXT_COLOR_DARK_BLUE);
+  // clr_color(TEXT_COLOR_DARK_BLUE);
 
-  cursor_set(177);
+  setcursortype(177);
   cursor(1);
 
   redraw();

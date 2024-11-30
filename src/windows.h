@@ -1,5 +1,29 @@
+/**
+ * SPDX-FileCopyrightText: 2024 David Higgins <www.github.com/zoul0813>
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/*************************/
+/*       windows.h       */
+/*************************/
+
+
+/**
+ * Window functions for Zeal 8-bit Computer text mode.
+ *
+ * This API writes directly to the Zeal Video Boards registers,
+ * implementing fast text mode "graphics".
+ *
+ * Screen coordinates are 0,0 based.  Most of the functions
+ * do not perform any type of error checking, refer to ZOS/ZVB
+ * [documentation](https://zeal8bit.com/) for valid parameters.
+ *
+ * This API pairs well with conio.h, but does not rely on it.
+ */
+
 #include <stdint.h>
-#include "conio.h"
+// #include "conio.h"
 
 #define SCREEN_COL80_WIDTH  80
 #define SCREEN_COL80_HEIGHT 40

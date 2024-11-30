@@ -1,21 +1,36 @@
+/**
+ * SPDX-FileCopyrightText: 2024 David Higgins <www.github.com/zoul0813>
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include <zos_video.h>
 #include <zvb_hardware.h>
 #include <zvb_gfx.h>
 
-#include "conio.h"
+#include "target.h"
 #include "windows.h"
+
+#define GET_COLOR()         zvb_peri_text_color
+#define SET_COLOR(c)        zvb_peri_text_color = c
+#define GET_COLOR_FG()      (zvb_peri_text_color & 0x0F)
+#define GET_COLOR_BG()      (zvb_peri_text_color >> 4)
+#define SET_COLORS(fg,bg)   zvb_peri_text_color = ((bg  << 4) | (fg & 0x0F))
 
 void window(window_t* window) {
   window->_attrs.offset = (window->flags & WIN_BORDER) ? 1 : 0;
   window->_attrs.pos_x = window->x + window->_attrs.offset;
   window->_attrs.pos_y = window->y + window->_attrs.offset;
 
-  textcolor(window->fg);
-  bgcolor(window->bg);
+  // textcolor(window->fg);
+  // bgcolor(window->bg);
+  unsigned char current_color = GET_COLOR();
+  SET_COLORS(window->fg, window->bg);
 
-  unsigned char cur = cursor(0);
+  unsigned char cur = zvb_peri_text_curs_time;
+  zvb_peri_text_curs_time = 0;
 
   unsigned char y = window->y;
   unsigned char x = window->x;
@@ -25,7 +40,7 @@ void window(window_t* window) {
   for(y = window->y; y < max_y; y++) {
     zvb_peri_text_curs_y = y;
     for(x = window->x; x < max_x; x++) {
-      char c = KEY_SPACE;
+      char c = CH_SPACE;
       // OPTIMIZE: move this into a separate block with loops like before...?
       if(bordered) {
         if(x == window->x && y == window->y) c = CH_ULCORNER;
@@ -38,7 +53,7 @@ void window(window_t* window) {
         else if(y == max_y - 1) c = CH_HLINE;
       }
       zvb_peri_text_curs_x = x;
-      // cputc(KEY_SPACE);
+      // cputc(CH_SPACE);
       zvb_peri_text_print_char = c;
     }
   }
@@ -52,7 +67,14 @@ void window(window_t* window) {
     // cputsxy(left, 1, "[ ");
     zvb_peri_text_print_char = '[';
     zvb_peri_text_print_char = ' ';
-    cputs(window->title);
+
+    // cputs(window->title);
+    for(int i = 0; i < 256; i++) {
+      unsigned char c = window->title[i];
+      if(c == 0x00) break;
+      zvb_peri_text_print_char = c;
+    }
+    // cputs(" ]");
     zvb_peri_text_print_char = ' ';
     zvb_peri_text_print_char = ']';
   }
@@ -60,7 +82,8 @@ void window(window_t* window) {
   if((window->flags & WIN_SHADOW) > 0) {
     // draw the shadow
     // let's assume all shadows are black for now?
-    bgcolor(TEXT_COLOR_BLACK);
+    // bgcolor(TEXT_COLOR_BLACK);
+    SET_COLORS(window->fg, TEXT_COLOR_BLACK);
     for(unsigned char i = 0; i < window->h; i++) {
       zvb_peri_text_curs_x = window->x + window->w;
       zvb_peri_text_curs_y = window->y + 1 + i;
@@ -73,7 +96,8 @@ void window(window_t* window) {
     }
   }
 
-  cursor(cur);
+  SET_COLOR(current_color);
+  zvb_peri_text_curs_time = cur;
 }
 
 void window_gotox(window_t* window, unsigned char x) {
@@ -91,10 +115,11 @@ void window_gotoxy(window_t* window, unsigned char x, unsigned char y) {
 void window_clrscr(window_t *window) {
   unsigned char current_x = window->_attrs.pos_x;
   unsigned char current_y = window->_attrs.pos_y;
-  unsigned char current_color = zvb_peri_text_color;
+  unsigned char current_color = GET_COLOR();
 
-  textcolor(window->fg);
-  bgcolor(window->bg);
+  // textcolor(window->fg);
+  // bgcolor(window->bg);
+  SET_COLORS(window->fg, window->bg);
 
   unsigned char max_w = window->w - (window->_attrs.offset * 2);
   unsigned char max_h = window->h - (window->_attrs.offset * 2);
@@ -113,7 +138,9 @@ void window_clrscr(window_t *window) {
   }
 
   // reset color
-  zvb_peri_text_color = current_color;
+  // zvb_peri_text_color = current_color;
+  SET_COLOR(current_color);
+
   window->_attrs.pos_x = current_x;
   window->_attrs.pos_y = current_y;
   zvb_peri_text_curs_x = current_x;
@@ -121,10 +148,11 @@ void window_clrscr(window_t *window) {
 }
 
 void window_clreol(window_t *window) {
-  unsigned char current_color = zvb_peri_text_color;
+  unsigned char current_color = GET_COLOR();
 
-  textcolor(window->fg);
-  bgcolor(window->bg);
+  // textcolor(window->fg);
+  // bgcolor(window->bg);
+  SET_COLORS(window->fg, window->bg);
 
   zvb_peri_text_curs_x = window->_attrs.pos_x;
   zvb_peri_text_curs_y = window->_attrs.pos_y;
@@ -135,7 +163,8 @@ void window_clreol(window_t *window) {
   }
 
   // reset color
-  zvb_peri_text_color = current_color;
+  // zvb_peri_text_color = current_color;
+  SET_COLOR(current_color);
   window->_attrs.pos_x = window->x + window->_attrs.offset;
   window->_attrs.pos_y++;
   zvb_peri_text_curs_x = window->_attrs.pos_x;
@@ -152,10 +181,11 @@ unsigned char window_wherey(window_t* window) {
 
 unsigned char window_putc(window_t* window, char c) {
   //save color
-  unsigned char current_color = zvb_peri_text_color;
+  unsigned char current_color = GET_COLOR();
 
-  textcolor(window->fg);
-  bgcolor(window->bg);
+  // textcolor(window->fg);
+  // bgcolor(window->bg);
+  SET_COLORS(window->fg, window->bg);
 
   zvb_peri_text_curs_x = window->_attrs.pos_x;
   zvb_peri_text_curs_y = window->_attrs.pos_y;
@@ -189,7 +219,8 @@ unsigned char window_putc(window_t* window, char c) {
   // we can't do anything about vertical overflow, so just let it happen
 
   // reset color
-  zvb_peri_text_color = current_color;
+  // zvb_peri_text_color = current_color;
+  SET_COLOR(current_color);
 
   return lines;
 }
@@ -205,12 +236,21 @@ unsigned char window_puts(window_t* window, const char* s) {
 }
 
 void _text_banner(unsigned char x, unsigned char y, unsigned char centered, window_t* window, const char* s) {
-  unsigned char bg = (zvb_peri_text_color & 0xF0);
-  unsigned char fg = (zvb_peri_text_color & 0x0F);
-  unsigned char cur = cursor(0);
+  unsigned char bg = (GET_COLOR() & 0xF0);
+  unsigned char fg = (GET_COLOR() & 0x0F);
+  unsigned char cur = zvb_peri_text_curs_time;
+  zvb_peri_text_curs_time = 0;
 
-  unsigned char width, height;
-  screensize(&width, &height);
+  unsigned char width = 0;
+  // screensize(&width, &height);
+  switch(zvb_ctrl_video_mode) {
+    case ZVB_CTRL_VID_MODE_TEXT_320:
+      width = 40;
+      break;
+    case ZVB_CTRL_VID_MODE_TEXT_640:
+      width = 80;
+      break;
+  }
 
   if(window != NULL) {
     x = window->x + x;
@@ -221,7 +261,8 @@ void _text_banner(unsigned char x, unsigned char y, unsigned char centered, wind
   }
 
   // invert the colors
-  zvb_peri_text_color = fg | bg;
+  // SET_COLORS(bg, fg);
+  SET_COLOR(fg | bg);
 
   unsigned char len = width;
   for(unsigned char i = 0; i < width; i++) {
@@ -262,10 +303,9 @@ void _text_banner(unsigned char x, unsigned char y, unsigned char centered, wind
   }
 
   // invert the colors again
-  zvb_peri_text_color = bg | fg;
-
-  cursor(cur);
-  // printf("width: %d, height: %d, pad: %d, len: %d\n", width, height, pad, len);
+  // zvb_peri_text_color = bg | fg;
+  SET_COLOR(bg | fg);
+  zvb_peri_text_curs_time = cur;
 }
 
 void text_banner(unsigned char x, unsigned char y, unsigned char centered, const char* s) {
@@ -281,6 +321,7 @@ void text_menu(unsigned char x, unsigned char y, const char* items) {
 }
 
 void window_banner(window_t* window, unsigned char x, unsigned char y, unsigned char centered, const char* s) {
+  SET_COLORS(window->fg, window->bg); // ???
   _text_banner(x, y, centered, window, s);
   window->_attrs.pos_y++;
   if(window->_attrs.pos_y < window->y) window->_attrs.pos_y = window->y;

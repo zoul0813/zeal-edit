@@ -1,3 +1,9 @@
+/**
+ * SPDX-FileCopyrightText: 2024 David Higgins <www.github.com/zoul0813>
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include <stdio.h>
 #include <stdint.h>
 #include <zos_errors.h>
@@ -80,7 +86,7 @@ void clr_color(unsigned char c) {
     zvb_peri_text_curs_x = 0;
     zvb_peri_text_curs_y = y;
     for(unsigned char x = 0; x < width; x++) {
-      zvb_peri_text_print_char = KEY_SPACE;
+      zvb_peri_text_print_char = CH_SPACE;
     }
   }
 }
@@ -152,15 +158,6 @@ void cputsxy (unsigned char x, unsigned char y, const char* s) {
   cputs(s);
 }
 
-// /* Like printf(), but uses direct screen output */
-// int cprintf (const char* format, ...) {
-//   return 0;
-// }
-
-// /* Like vprintf(), but uses direct screen output */
-// int vcprintf (const char* format, va_list ap) {
-//   return 0;
-// }
 
 /* Return a character from the keyboard. If there is no character available,
 ** the function waits until the user does press a key. If cursor is set to
@@ -195,41 +192,6 @@ _exit_cgetc:
   return c;
 }
 
-// /* Like scanf(), but uses direct keyboard input */
-// int cscanf (const char* format, ...) {
-//   return 0;
-// }
-
-// /* Like vscanf(), but uses direct keyboard input */
-// int vcscanf (const char* format, va_list ap) {
-//   return 0;
-// }
-
-// /* Return the character from the current cursor position */
-// char cpeekc (void) {
-//   return 0;
-// }
-
-// /* Return the color from the current cursor position */
-// unsigned char cpeekcolor (void) {
-//   return 0;
-// }
-
-// /* Return the reverse attribute from the current cursor position.
-// ** If the character is reversed, then return 1; return 0 otherwise.
-// */
-// unsigned char cpeekrevers (void) {
-//   return 0;
-// }
-
-// /* Return a string of the characters that start at the current cursor position.
-// ** Put the string into the buffer to which "s" points.  The string will have
-// ** "length" characters, then will be '\0'-terminated.
-// */
-// void cpeeks (char* s, unsigned int length) {
-  
-// }
-
 /* If onoff is 1, a cursor is displayed when waiting for keyboard input. If
 ** onoff is 0, the cursor is hidden when waiting for keyboard input. The
 ** function returns the old cursor setting.
@@ -246,21 +208,14 @@ unsigned char cursor (unsigned char onoff) {
 }
 
 /* Set the cursor character to c */
-void cursor_set(unsigned char c) {
+void setcursortype(unsigned char c) {
   zvb_peri_text_curs_char = c;
 }
 
 /* Set the cursor mode to m - refer to zvb_hardware.h for ZVB_PERI_TEXT_CTRL modes */
-void cursor_mode(unsigned char m) {
+void setcursormode(unsigned char m) {
   zvb_peri_text_ctrl = m;
 }
-
-// /* Enable/disable reverse character display. This may not be supported by
-// ** the output device. Return the old setting.
-// */
-// unsigned char revers (unsigned char onoff) {
-//   return 0;
-// }
 
 /* Set the color for text output. The old color setting is returned. */
 unsigned char textcolor (unsigned char color) {
@@ -285,11 +240,6 @@ unsigned char bgcolor (unsigned char color) {
 
   return (old & 0x0F) >> 4;
 }
-
-// /* Set the color for the border. The old color setting is returned. */
-// unsigned char bordercolor (unsigned char color) {
-//   return 0;
-// }
 
 /* Output a horizontal line with the given length starting at the current
 ** cursor position.
@@ -324,7 +274,7 @@ void cvlinexy (unsigned char x, unsigned char y, unsigned char length) {
 /* Clear part of a line (write length spaces). */
 void cclear (unsigned char length) {
     for(unsigned char i = 0; i < length; i++) {
-    cputc(KEY_SPACE);
+    cputc(CH_SPACE);
   }
 }
 
