@@ -191,7 +191,8 @@ unsigned char window_putc(window_t* window, char c) {
   zvb_peri_text_curs_y = window->_attrs.pos_y;
 
   unsigned char lines = 0;
-
+  unsigned char tab_width = (window->_attrs.pos_x - window->_attrs.offset) % 4;
+  
   switch(c) {
     case CH_NEWLINE:
       window->_attrs.pos_y++;
@@ -199,7 +200,6 @@ unsigned char window_putc(window_t* window, char c) {
       lines++;
       break;
     case CH_TAB:
-      unsigned char tab_width = (window->_attrs.pos_x - window->_attrs.offset) % 4;
       if(tab_width == 0) tab_width = 4;
       for(unsigned char i = 0; i < tab_width; i++) {
         zvb_peri_text_print_char = ' ';
