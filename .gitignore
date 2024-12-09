@@ -3,3 +3,5 @@
 /tmp
 assets/*.zt[spm]
 *.tiled-session
+.vscode/launch.json
+.vscode/c_cpp_properties.json
