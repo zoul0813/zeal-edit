@@ -1,4 +1,6 @@
 /bin
+/build
+/lib
 /release
 /tmp
 assets/*.zt[spm]
@@ -6,3 +8,4 @@ assets/*.zt[spm]
 .vscode/launch.json
 .vscode/c_cpp_properties.json
 zeal.ini
+autoexec.zs

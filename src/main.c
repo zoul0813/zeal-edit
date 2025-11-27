@@ -1,14 +1,12 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <zos_sys.h>
-#include <zos_keyboard.h>
 #include <zos_errors.h>
 #include <zos_video.h>
 #include <zos_vfs.h>
-#include <zvb_hardware.h>
+#include <windows.h>
 
-#include "conio.h"
-#include "windows.h"
+// #include "conio.h"
 
 // #include "demo.h"
 #include "edit.h"
