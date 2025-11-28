@@ -108,9 +108,6 @@
 #define SET_Y(y)                zvb_peri_text_curs_y = y
 #define SET_XY(x,y)             SET_X(x); SET_Y(y)
 
-extern uint8_t mmu_page_current;
-const __sfr __banked __at(0xF0) mmu_page0_ro;
-__sfr __at(0xF0) mmu_page0;
 uint8_t __at(0x0000) SCR_TEXT[SCREEN_COL80_HEIGHT][SCREEN_COL80_WIDTH];
 uint8_t __at(0x1000) SCR_COLOR[SCREEN_COL80_HEIGHT][SCREEN_COL80_WIDTH];
 uint8_t __at(0x3000) SCR_FONT[SCREEN_FONT_SIZE];
@@ -161,9 +158,9 @@ extern window_t* win_NonePtr;
 void window(window_t* w);
 void window_columns(window_t* w, uint8_t *columns, uint8_t count);
 void window_active(window_t* w, uint8_t active);
-void window_gotox(window_t* w, uint8_t x);
-void window_gotoy(window_t* w, uint8_t y);
-void window_gotoxy(window_t* w, uint8_t x, uint8_t y);
+inline void window_gotox(window_t* w, uint8_t x);
+inline void window_gotoy(window_t* w, uint8_t y);
+inline void window_gotoxy(window_t* w, uint8_t x, uint8_t y);
 void window_clrscr(window_t* w);
 void window_clreol(window_t* w);
 void window_save(void);
@@ -173,8 +170,8 @@ uint8_t window_putc(window_t* w, char c);
 uint8_t window_putc_color(window_t* w, char c, uint8_t color);
 uint8_t window_puts(window_t* w, const char* s);
 uint8_t window_puts_color(window_t* w, const char* s, uint8_t color);
-uint8_t window_wherex(window_t* w);
-uint8_t window_wherey(window_t* w);
+inline uint8_t window_wherex(window_t* w);
+inline uint8_t window_wherey(window_t* w);
 
 /* Where does this belong? */
 void text_banner(uint8_t x, uint8_t y, uint8_t c, uint8_t centered, const char* s);

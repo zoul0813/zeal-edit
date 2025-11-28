@@ -44,15 +44,42 @@
 #define VIDEO_MODE VIDEO_MODE_HIGH
 #endif
 
+
+#ifndef CH_NEWLINE
 #define CH_NEWLINE      0x0A // New line
+#endif
+
+#ifndef CH_SPACE
 #define CH_SPACE        0x20 // Space
+#endif
+
+#ifndef CH_TAB
 #define CH_TAB          0x09   /* tabulator */
+#endif
+
+#ifndef CH_ULCORNER
 #define CH_ULCORNER     0xDA // Top Left
+#endif
+
+#ifndef CH_URCORNER
 #define CH_URCORNER     0xBF // Top Right
+#endif
+
+#ifndef CH_LLCORNER
 #define CH_LLCORNER     0xC0 // Bottom Left
+#endif
+
+#ifndef CH_LRCORNER
 #define CH_LRCORNER     0xD9 // Bottom Right
+#endif
+
+#ifndef CH_HLINE
 #define CH_HLINE        0xC4 // Horizonal line
+#endif
+
+#ifndef CH_VLINE
 #define CH_VLINE        0xB3 // Vertical line
+#endif
 
 // /*****************************************************************************/
 // /* Character codes                                                           */
