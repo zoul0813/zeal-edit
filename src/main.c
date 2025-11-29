@@ -3,7 +3,7 @@
 #include <zos_errors.h>
 #include <zos_video.h>
 #include <zos_vfs.h>
-#include <common.h>
+#include <core.h>
 #include <windows.h>
 #include <conio.h>
 

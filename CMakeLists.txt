@@ -14,34 +14,24 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib)
 
-# Ensure dirs exist
-file(MAKE_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-file(MAKE_DIRECTORY ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
-file(MAKE_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
-
 set(ZOS_TOOLCHAIN sdcc)
 include($ENV{ZOS_PATH}/cmake/zos_init.cmake)
 
 zos_use(zvb)
 find_package(ZVB_SDK REQUIRED)
 
+zos_use(COREUTILS)
+find_package(COREUTILS REQUIRED)
+
 project(${target_name} C ASM)
 
-# include_directories(${CMAKE_SOURCE_DIR}/include)
-include_directories($ENV{ZVB_SDK_PATH}/include)
-
-add_subdirectory(libsrc/libcommon)
-add_subdirectory(libsrc/libconio)
-add_subdirectory(libsrc/libkeyboard)
-add_subdirectory(libsrc/libwindows)
 
 add_executable(${target_name}
-    "src/main.c"
-    "src/edit.c")
+"src/main.c"
+"src/edit.c")
 
-# target_link_libraries(${target_name} PRIVATE )
-target_link_libraries(${target_name} PRIVATE zvb_gfx)
-zos_link_libraries(${target_name} PRIVATE common conio keyboard windows)
+target_include_directories(${target_name} PRIVATE $ENV{ZVB_SDK_PATH}/include)
+target_link_libraries(${target_name} PRIVATE core conio keyboard windows)
 
 target_compile_options(${target_name} PRIVATE
     $<$<COMPILE_LANGUAGE:C>:--nostdlib>

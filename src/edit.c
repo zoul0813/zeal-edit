@@ -3,7 +3,7 @@
 #include <zos_video.h>
 #include <zos_vfs.h>
 #include <zvb_hardware.h>
-#include <common.h>
+#include <core.h>
 #include <windows.h>
 #include <keyboard.h>
 #include <conio.h>
