@@ -4,15 +4,20 @@
 
 #define DOCUMENT_X 0
 #define DOCUMENT_Y 1
+static const char k_unnamed_title[] = "<unnamed>";
 
 void editor_state_init(EditorState* state, const char* path)
 {
+    const char* title = path;
+    if ((title == 0) || (title[0] == '\0'))
+        title = k_unnamed_title;
+
     state->cursor_x = 0;
     state->cursor_y = 0;
     state->dialog_open = 0;
     state->meta_open = 0;
 
-    state->filename = path;
+    state->filename = title;
     state->filesize = 0;
     state->buffer_position = 0;
     state->buffer_top = 0;
@@ -24,7 +29,7 @@ void editor_state_init(EditorState* state, const char* path)
     state->win_document.fg = TEXT_COLOR_WHITE;
     state->win_document.bg = TEXT_COLOR_DARK_BLUE;
     state->win_document.flags = WIN_BORDER;
-    state->win_document.title = path;
+    state->win_document.title = title;
 
     state->win_dialog.x = 15;
     state->win_dialog.y = 10;

@@ -109,25 +109,27 @@ void edit(const char* path)
     reset_startup_screen_state();
     editor_state_init(state, path);
 
-    int16_t load_result = document_store_load_from_path(state, path);
-    if (load_result != 0) {
+    if ((path != 0) && (path[0] != '\0')) {
+        int16_t load_result = document_store_load_from_path(state, path);
+        if (load_result != 0) {
 #ifdef BUILD_VERIFY
-        if (load_result == -ERR_INVALID_PARAMETER) {
-            put_s("Scratch buffer crosses MMU page boundary\n");
-            exit(ERR_INVALID_PARAMETER);
-        }
+            if (load_result == -ERR_INVALID_PARAMETER) {
+                put_s("Scratch buffer crosses MMU page boundary\n");
+                exit(ERR_INVALID_PARAMETER);
+            }
 #endif
-        if (load_result < 0) {
-            put_s("Failed to open file ");
-            put_u8((uint8_t) -load_result);
-            put_c(CH_NEWLINE);
-            exit((uint8_t) -load_result);
-        }
+            if (load_result < 0) {
+                put_s("Failed to open file ");
+                put_u8((uint8_t) -load_result);
+                put_c(CH_NEWLINE);
+                exit((uint8_t) -load_result);
+            }
 
-        put_s("Failed to read file ");
-        put_u8((uint8_t) load_result);
-        put_c(CH_NEWLINE);
-        exit((uint8_t) load_result);
+            put_s("Failed to read file ");
+            put_u8((uint8_t) load_result);
+            put_c(CH_NEWLINE);
+            exit((uint8_t) load_result);
+        }
     }
 
     setcursortype(177);

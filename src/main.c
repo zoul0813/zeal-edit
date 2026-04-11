@@ -12,15 +12,14 @@
 /**/
 int main(int argc, char** argv) {
   zos_err_t err;
+  const char* path = NULL;
 
-  if(argc < 1) {
-    put_s("Invalid args, provide a filename to edit\n");
-    exit(1);
-  }
+  if(argc > 0 && argv != NULL && argv[0] != NULL && argv[0][0] != '\0')
+    path = argv[0];
 
   err = ERR_SUCCESS;
 
-  edit(argv[0]);
+  edit(path);
 
   // reset the screen
   err = ioctl(DEV_STDOUT, CMD_RESET_SCREEN, NULL);
