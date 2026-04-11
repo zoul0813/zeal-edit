@@ -33,6 +33,13 @@ unsigned char file_buffer[BUFFER_SIZE];
 uint16_t buffer_position;
 uint16_t buffer_top;
 
+static void reset_startup_screen_state(void)
+{
+    (void) ioctl(DEV_STDOUT, CMD_RESET_SCREEN, NULL);
+    clrscr();
+    gotoxy(0, 0);
+}
+
 static window_t winDocument = {
     .x = DOCUMENT_X,
     .y = DOCUMENT_Y,
@@ -243,6 +250,7 @@ unsigned char edit_loop(void)
 void edit(const char* path)
 {
     kb_mode_non_block_raw();
+    reset_startup_screen_state();
     filename          = path;
     winDocument.title = path;
 

@@ -1,0 +1,6 @@
+row-01 LF
+row-02 CRLF
+row-03 LF
+row-04 CRLF
+row-05 LF
+row-06 CRLF
