@@ -8,6 +8,7 @@
 
 #define EDIT_BUFFER_SIZE (32 * KILOBYTE)
 #define EDIT_CHUNK_SIZE 1024
+#define EDIT_PATH_MAX 128
 
 typedef struct EditorState {
     unsigned char cursor_x;
@@ -20,6 +21,8 @@ typedef struct EditorState {
 
     const char* filename;
     const char* status_text;
+    char filename_storage[EDIT_PATH_MAX];
+    char prompt_storage[EDIT_PATH_MAX];
     uint16_t filesize;
     unsigned char scratch[EDIT_CHUNK_SIZE];
     unsigned char file_buffer[EDIT_BUFFER_SIZE];
@@ -31,5 +34,7 @@ typedef struct EditorState {
 } EditorState;
 
 void editor_state_init(EditorState* state, const char* path);
+void editor_state_set_named_path(EditorState* state, const char* path);
+void editor_state_reset_document_view(EditorState* state);
 
 #endif

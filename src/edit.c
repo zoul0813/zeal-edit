@@ -22,6 +22,11 @@ static const char k_status_saved[] = "Saved";
 static const char k_status_save_needs_name[] = "Save needs filename (Task 6: Open/Save-As)";
 static const char k_status_save_open_failed[] = "Save failed: open/truncate";
 static const char k_status_save_write_failed[] = "Save failed: write/close";
+static const char k_status_opened[] = "Opened";
+static const char k_status_open_cancelled[] = "Open cancelled";
+static const char k_status_open_empty[] = "Open cancelled: empty path";
+static const char k_status_open_failed[] = "Open failed";
+static const char k_status_dirty_prompt_cancelled[] = "Open cancelled: unsaved changes kept";
 
 static EditorState g_editor_state;
 
@@ -35,6 +40,114 @@ static void reset_startup_screen_state(void)
 static unsigned char is_printable(unsigned char c)
 {
     return ((c >= 0x20) && (c <= 0x7E));
+}
+
+static void set_status_and_draw(EditorState* state, const char* status_text)
+{
+    state->status_text = status_text;
+    editor_ui_draw_bottomenu(state);
+}
+
+static void draw_prompt_banner(const char* prompt, const char* value)
+{
+    char line[80] = { 0 };
+    uint8_t out = 0;
+    uint8_t i = 0;
+
+    while ((prompt[i] != '\0') && (out < 79)) {
+        line[out] = prompt[i];
+        out++;
+        i++;
+    }
+
+    i = 0;
+    while ((value[i] != '\0') && (out < 79)) {
+        line[out] = value[i];
+        out++;
+        i++;
+    }
+
+    text_banner(0, SCREEN_COL80_HEIGHT - 1, g_editor_menu_color, 0, line);
+}
+
+enum {
+    OPEN_PROMPT_CANCEL = 0,
+    OPEN_PROMPT_OK = 1,
+    OPEN_PROMPT_EMPTY = 2
+};
+
+static unsigned char prompt_open_path(char* out_path, uint8_t out_path_len)
+{
+    uint8_t len = 0;
+
+    if ((out_path == 0) || (out_path_len == 0))
+        return 0;
+
+    out_path[0] = '\0';
+    draw_prompt_banner("Open path (Enter=OK, Esc=Cancel): ", out_path);
+    while (1) {
+        kb_keys_t key = getkey();
+        if (key == 0)
+            continue;
+
+        if (key == KB_ESC)
+            return OPEN_PROMPT_CANCEL;
+
+        if (key == KB_KEY_ENTER)
+            return (len > 0) ? OPEN_PROMPT_OK : OPEN_PROMPT_EMPTY;
+
+        if (key == KB_KEY_BACKSPACE) {
+            if (len > 0) {
+                len--;
+                out_path[len] = '\0';
+                draw_prompt_banner("Open path (Enter=OK, Esc=Cancel): ", out_path);
+            }
+            continue;
+        }
+
+        unsigned char ch = getch(key);
+        if (!is_printable(ch))
+            continue;
+        if (len >= (out_path_len - 1))
+            continue;
+
+        out_path[len] = (char) ch;
+        len++;
+        out_path[len] = '\0';
+        draw_prompt_banner("Open path (Enter=OK, Esc=Cancel): ", out_path);
+    }
+}
+
+enum {
+    DIRTY_ACTION_CANCEL = 0,
+    DIRTY_ACTION_SAVE = 1,
+    DIRTY_ACTION_DISCARD = 2
+};
+
+static unsigned char prompt_dirty_action(EditorState* state)
+{
+    (void) state;
+    text_banner(0,
+                SCREEN_COL80_HEIGHT - 1,
+                g_editor_menu_color,
+                0,
+                "Unsaved changes. S=Save D=Discard C/Esc=Cancel");
+    while (1) {
+        kb_keys_t key = getkey();
+        if (key == 0)
+            continue;
+
+        if (key == KB_ESC)
+            return DIRTY_ACTION_CANCEL;
+
+        unsigned char ch = getch(key);
+        if ((ch == 's') || (ch == 'S'))
+            return DIRTY_ACTION_SAVE;
+        if ((ch == 'd') || (ch == 'D'))
+            return DIRTY_ACTION_DISCARD;
+        if ((ch == 'c') || (ch == 'C'))
+            return DIRTY_ACTION_CANCEL;
+    }
 }
 
 static void apply_insert(EditorState* state, char c)
@@ -94,6 +207,50 @@ static void apply_save(EditorState* state)
     editor_ui_draw_bottomenu(state);
 }
 
+static void apply_open(EditorState* state)
+{
+    if (state->dirty) {
+        unsigned char action = prompt_dirty_action(state);
+        if (action == DIRTY_ACTION_CANCEL) {
+            set_status_and_draw(state, k_status_dirty_prompt_cancelled);
+            return;
+        }
+
+        if (action == DIRTY_ACTION_SAVE) {
+            apply_save(state);
+            if (state->dirty)
+                return;
+        }
+    }
+
+    unsigned char open_prompt_result = prompt_open_path(state->prompt_storage, EDIT_PATH_MAX);
+    if (open_prompt_result != OPEN_PROMPT_OK) {
+        if (open_prompt_result == OPEN_PROMPT_EMPTY)
+            set_status_and_draw(state, k_status_open_empty);
+        else
+            set_status_and_draw(state, k_status_open_cancelled);
+        return;
+    }
+
+    zos_dev_t preflight_dev = open(state->prompt_storage, O_RDONLY);
+    if (preflight_dev < 0) {
+        set_status_and_draw(state, k_status_open_failed);
+        return;
+    }
+    (void) close(preflight_dev);
+
+    if (document_store_load_from_path(state, state->prompt_storage) != 0) {
+        set_status_and_draw(state, k_status_open_failed);
+        return;
+    }
+
+    editor_state_set_named_path(state, state->prompt_storage);
+    editor_state_reset_document_view(state);
+    state->dirty = 0;
+    state->status_text = k_status_opened;
+    editor_ui_redraw(state);
+}
+
 static unsigned char edit_loop(EditorState* state)
 {
     if (state->dialog_open)
@@ -116,6 +273,9 @@ static unsigned char edit_loop(EditorState* state)
             break;
         case KB_F2:
             apply_save(state);
+            break;
+        case KB_F3:
+            apply_open(state);
             break;
 
         /* Editing mode and mutation keys */

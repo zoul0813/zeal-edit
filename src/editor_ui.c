@@ -23,7 +23,7 @@ static void status_append(char* dst, unsigned char* offset, const char* src)
 
 void editor_ui_draw_topmenu(void)
 {
-    text_menu(0, 0, g_editor_menu_color, "  F2=Save Esc=Quit Home/End,PgUp/PgDn,Arrows=Move");
+    text_menu(0, 0, g_editor_menu_color, "  F2=Save F3=Open Esc=Quit Home/End,PgUp/PgDn,Arrows=Move");
 }
 
 void editor_ui_draw_bottomenu(const EditorState* state)
