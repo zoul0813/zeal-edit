@@ -26,7 +26,6 @@ static const char k_status_opened[] = "Opened";
 static const char k_status_open_cancelled[] = "Open cancelled";
 static const char k_status_open_empty[] = "Open cancelled: empty path";
 static const char k_status_open_failed[] = "Open failed";
-static const char k_status_open_too_large[] = "Open failed: file too large for buffer";
 static const char k_status_dirty_prompt_cancelled[] = "Open cancelled: unsaved changes kept";
 
 static EditorState g_editor_state;
@@ -153,7 +152,7 @@ static unsigned char prompt_dirty_action(EditorState* state)
 
 static void apply_insert(EditorState* state, char c)
 {
-    uint16_t offset = document_store_cursor_offset(state);
+    uint32_t offset = document_store_cursor_offset(state);
     if (!document_store_insert(state, offset, c, state->insert_mode))
         return;
 
@@ -165,7 +164,7 @@ static void apply_insert(EditorState* state, char c)
 
 static void apply_backspace(EditorState* state)
 {
-    uint16_t offset = document_store_cursor_offset(state);
+    uint32_t offset = document_store_cursor_offset(state);
     if (!document_store_backspace(state, offset))
         return;
 
@@ -177,7 +176,7 @@ static void apply_backspace(EditorState* state)
 
 static void apply_delete(EditorState* state)
 {
-    uint16_t offset = document_store_cursor_offset(state);
+    uint32_t offset = document_store_cursor_offset(state);
     if (!document_store_delete(state, offset))
         return;
 
@@ -189,13 +188,13 @@ static void apply_delete(EditorState* state)
 
 static void snap_cursor_to_visible_content(EditorState* state)
 {
-    uint16_t offset = document_store_cursor_offset(state);
+    uint32_t offset = document_store_cursor_offset(state);
     document_store_set_cursor_from_offset(state, offset);
 }
 
 static unsigned char cursor_is_at_line_end(EditorState* state)
 {
-    uint16_t offset = document_store_cursor_offset(state);
+    uint32_t offset = document_store_cursor_offset(state);
     if (offset >= state->filesize)
         return 1;
     return (document_store_char_at(state, offset) == '\n');
@@ -203,7 +202,7 @@ static unsigned char cursor_is_at_line_end(EditorState* state)
 
 static void move_cursor_to_line_end(EditorState* state)
 {
-    uint16_t offset = document_store_cursor_offset(state);
+    uint32_t offset = document_store_cursor_offset(state);
     while (offset < state->filesize) {
         if (document_store_char_at(state, offset) == '\n')
             break;
@@ -266,10 +265,6 @@ static void apply_open(EditorState* state)
     (void) close(preflight_dev);
 
     int16_t size_result = document_store_validate_path_size(state, state->prompt_storage);
-    if (size_result == DOCUMENT_STORE_ERR_FILE_TOO_LARGE) {
-        set_status_and_draw(state, k_status_open_too_large);
-        return;
-    }
     if (size_result != 0) {
         set_status_and_draw(state, k_status_open_failed);
         return;
@@ -277,10 +272,7 @@ static void apply_open(EditorState* state)
 
     int16_t load_result = document_store_load_from_path(state, state->prompt_storage);
     if (load_result != 0) {
-        if (load_result == DOCUMENT_STORE_ERR_FILE_TOO_LARGE)
-            set_status_and_draw(state, k_status_open_too_large);
-        else
-            set_status_and_draw(state, k_status_open_failed);
+        set_status_and_draw(state, k_status_open_failed);
         return;
     }
 
@@ -425,10 +417,6 @@ void edit(const char* path)
 
     if ((path != 0) && (path[0] != '\0')) {
         int16_t size_result = document_store_validate_path_size(state, path);
-        if (size_result == DOCUMENT_STORE_ERR_FILE_TOO_LARGE) {
-            put_s("File too large for current edit buffer\n");
-            exit(ERR_FAILURE);
-        }
         if (size_result != 0) {
             if (size_result < 0) {
                 put_s("Failed to open file ");
@@ -451,10 +439,6 @@ void edit(const char* path)
                 exit(ERR_INVALID_PARAMETER);
             }
 #endif
-            if (load_result == DOCUMENT_STORE_ERR_FILE_TOO_LARGE) {
-                put_s("File too large for current edit buffer\n");
-                exit(ERR_FAILURE);
-            }
             if (load_result < 0) {
                 put_s("Failed to open file ");
                 put_u8((uint8_t) -load_result);
@@ -482,5 +466,6 @@ void edit(const char* path)
             break;
     }
 
+    document_store_close_source(state);
     kb_mode_default();
 }

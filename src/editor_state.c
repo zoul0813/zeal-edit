@@ -60,6 +60,10 @@ void editor_state_init(EditorState* state, const char* path)
     state->source_size = 0;
     state->add_size = 0;
     state->piece_count = 0;
+    state->source_cache_base = 0;
+    state->source_cache_size = 0;
+    state->source_cache_valid = 0;
+    state->source_dev = -1;
 
     state->win_document.x = DOCUMENT_X;
     state->win_document.y = DOCUMENT_Y;

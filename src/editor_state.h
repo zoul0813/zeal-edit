@@ -5,16 +5,17 @@
 
 #include <core.h>
 #include <windows.h>
+#include <zos_vfs.h>
 
-#define EDIT_BUFFER_SIZE (16 * KILOBYTE)
+#define EDIT_BUFFER_SIZE (4 * KILOBYTE)
 #define EDIT_CHUNK_SIZE 1024
 #define EDIT_PATH_MAX 128
 #define EDIT_PIECE_MAX 768
 
 typedef struct DocumentPiece {
     uint8_t source_kind;
-    uint16_t start;
-    uint16_t length;
+    uint32_t start;
+    uint32_t length;
 } DocumentPiece;
 
 typedef struct EditorState {
@@ -30,15 +31,20 @@ typedef struct EditorState {
     const char* status_text;
     char filename_storage[EDIT_PATH_MAX];
     char prompt_storage[EDIT_PATH_MAX];
-    uint16_t filesize;
-    uint16_t source_size;
-    uint16_t add_size;
+    uint32_t filesize;
+    uint32_t source_size;
+    uint32_t add_size;
     uint16_t piece_count;
     DocumentPiece pieces[EDIT_PIECE_MAX];
     unsigned char scratch[EDIT_CHUNK_SIZE];
+    unsigned char source_cache[16 * KILOBYTE];
+    uint32_t source_cache_base;
+    uint16_t source_cache_size;
+    unsigned char source_cache_valid;
+    zos_dev_t source_dev;
     unsigned char file_buffer[EDIT_BUFFER_SIZE];
-    uint16_t buffer_position;
-    uint16_t buffer_top;
+    uint32_t buffer_position;
+    uint32_t buffer_top;
 
     window_t win_document;
     window_t win_dialog;
