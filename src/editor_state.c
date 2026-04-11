@@ -45,6 +45,8 @@ void editor_state_reset_document_view(EditorState* state)
 
 void editor_state_init(EditorState* state, const char* path)
 {
+    uint8_t i = 0;
+
     editor_state_reset_document_view(state);
     state->dialog_open = 0;
     state->meta_open = 0;
@@ -63,6 +65,12 @@ void editor_state_init(EditorState* state, const char* path)
     state->source_cache_base = 0;
     state->source_cache_size = 0;
     state->source_cache_valid = 0;
+    state->source_cache_page = 0;
+    state->source_cache_page_allocated = 0;
+    state->add_page_count = 0;
+    for (i = 0; i < EDIT_ADD_PAGE_MAX; i++) {
+        state->add_pages[i] = 0;
+    }
     state->source_dev = -1;
 
     state->win_document.x = DOCUMENT_X;

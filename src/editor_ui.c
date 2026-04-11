@@ -24,7 +24,7 @@ static void status_append(char* dst, unsigned char* offset, const char* src)
 
 void editor_ui_draw_topmenu(void)
 {
-    text_menu(0, 0, g_editor_menu_color, "  F2=Save F3=Open Esc=Quit Home/End,PgUp/PgDn,Arrows=Move");
+    text_menu(0, 0, g_editor_menu_color, "  F2 Save  F3 Open  Esc Quit");
 }
 
 void editor_ui_draw_bottomenu(const EditorState* state)
@@ -62,21 +62,6 @@ void editor_ui_draw_document(EditorState* state)
 
     cursor(cur);
     state->buffer_position = clamp(i, 0, state->filesize);
-}
-
-void editor_ui_draw_dialog(EditorState* state)
-{
-    window(&state->win_dialog);
-    window_banner(&state->win_dialog, 0, 0, 1, "Find");
-
-    window_puts(&state->win_dialog, "\n");
-    window_puts(&state->win_dialog,
-                "  Find What: [this is the end_\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9\xf9]\n");
-    window_puts(&state->win_dialog, "\n");
-    window_puts(&state->win_dialog, "  [ ] Match Whole Word Only\n");
-    window_puts(&state->win_dialog, "  [ ] Match Case\n");
-
-    window_banner(&state->win_dialog, 0, state->win_dialog.h - 1, 1, "[OK]  [Cancel]  [Help]");
 }
 
 void editor_ui_redraw(EditorState* state)

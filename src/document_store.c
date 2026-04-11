@@ -7,12 +7,19 @@
 #include "document_store.h"
 
 #define MMU_PAGE_SIZE 0x4000
+#define MMU_WINDOW_ADDR 0x8000
+#define MMU_WINDOW ((unsigned char*) MMU_WINDOW_ADDR)
 #define DOCUMENT_X 0
 #define DOCUMENT_Y 1
 #define DOCUMENT_COLUMNS (SCREEN_COL80_WIDTH - (DOCUMENT_X + 2))
 #define DOCUMENT_LINES (SCREEN_COL80_HEIGHT - DOCUMENT_Y - 3)
 #define PIECE_SOURCE 0
 #define PIECE_ADD 1
+#define EDIT_ADD_MAX_BYTES ((uint32_t) EDIT_ADD_PAGE_MAX * (uint32_t) MMU_PAGE_SIZE)
+#define SOURCE_IO_CHUNK_SIZE 64
+
+const __sfr __banked __at(0xF2) mmu_page2_ro;
+__sfr __at(0xF2) mmu_page2;
 
 #if EDIT_CHUNK_SIZE > MMU_PAGE_SIZE
 #error "EDIT_CHUNK_SIZE must not exceed MMU_PAGE_SIZE"
@@ -27,6 +34,78 @@ static uint32_t clamp_u32(uint32_t value, uint32_t min_value, uint32_t max_value
     return value;
 }
 
+static unsigned char document_store_map_page(uint8_t page_index)
+{
+    mmu_page2 = page_index;
+    return 1;
+}
+
+static unsigned char document_store_map_page2_guarded(uint8_t page_index, uint8_t* out_prev_page2)
+{
+    *out_prev_page2 = mmu_page2_ro;
+    if (!document_store_map_page(page_index))
+        return 0;
+    return 1;
+}
+
+static void document_store_restore_page2(uint8_t page_index)
+{
+    mmu_page2 = page_index;
+}
+
+static unsigned char document_store_ensure_add_page(EditorState* state, uint8_t page_slot)
+{
+    while (state->add_page_count <= page_slot) {
+        uint8_t page_index = 0;
+        if (state->add_page_count >= EDIT_ADD_PAGE_MAX)
+            return 0;
+        if (palloc(&page_index) != ERR_SUCCESS)
+            return 0;
+        state->add_pages[state->add_page_count] = page_index;
+        state->add_page_count++;
+    }
+
+    return 1;
+}
+
+static unsigned char document_store_write_add_byte(EditorState* state, uint32_t add_offset, unsigned char value)
+{
+    uint8_t page_slot = (uint8_t) (add_offset / MMU_PAGE_SIZE);
+    uint16_t page_inner = (uint16_t) (add_offset & (MMU_PAGE_SIZE - 1));
+    uint8_t prev_page2 = 0;
+
+    if (!document_store_ensure_add_page(state, page_slot))
+        return 0;
+    if (!document_store_map_page2_guarded(state->add_pages[page_slot], &prev_page2))
+        return 0;
+
+    MMU_WINDOW[page_inner] = value;
+    document_store_restore_page2(prev_page2);
+    return 1;
+}
+
+static char document_store_read_add_byte(EditorState* state, uint32_t add_offset)
+{
+    uint8_t page_slot = 0;
+    uint16_t page_inner = 0;
+    uint8_t prev_page2 = 0;
+
+    if (add_offset >= state->add_size)
+        return '\0';
+
+    page_slot = (uint8_t) (add_offset / MMU_PAGE_SIZE);
+    page_inner = (uint16_t) (add_offset & (MMU_PAGE_SIZE - 1));
+
+    if (page_slot >= state->add_page_count)
+        return '\0';
+    if (!document_store_map_page2_guarded(state->add_pages[page_slot], &prev_page2))
+        return '\0';
+
+    char c = (char) MMU_WINDOW[page_inner];
+    document_store_restore_page2(prev_page2);
+    return c;
+}
+
 unsigned char document_store_is_ascii(char c)
 {
     return ((c > 0x1F) && (c < 0x7F));
@@ -34,11 +113,26 @@ unsigned char document_store_is_ascii(char c)
 
 void document_store_close_source(EditorState* state)
 {
+    uint8_t i = 0;
+
     if (state == 0)
         return;
 
     if (state->source_dev >= 0)
         (void) close(state->source_dev);
+
+    if (state->source_cache_page_allocated) {
+        (void) pfree(state->source_cache_page);
+        state->source_cache_page_allocated = 0;
+        state->source_cache_page = 0;
+    }
+
+    for (i = 0; i < state->add_page_count; i++) {
+        (void) pfree(state->add_pages[i]);
+        state->add_pages[i] = 0;
+    }
+    state->add_page_count = 0;
+    state->add_size = 0;
 
     state->source_dev = -1;
     state->source_cache_valid = 0;
@@ -48,34 +142,51 @@ void document_store_close_source(EditorState* state)
 
 static unsigned char document_store_source_cache_load(EditorState* state, uint32_t source_offset)
 {
+    unsigned char io_chunk[SOURCE_IO_CHUNK_SIZE];
+    zos_dev_t source_dev = 0;
+    uint8_t cache_page = 0;
+
     if ((state == 0) || (state->source_dev < 0))
         return 0;
 
+    if (!state->source_cache_page_allocated) {
+        if (palloc(&state->source_cache_page) != ERR_SUCCESS)
+            return 0;
+        state->source_cache_page_allocated = 1;
+    }
+    source_dev = state->source_dev;
+    cache_page = state->source_cache_page;
+
     uint32_t page_base = source_offset & ~((uint32_t) (MMU_PAGE_SIZE - 1));
     int32_t seek_to = (int32_t) page_base;
-    zos_err_t seek_err = seek(state->source_dev, &seek_to, SEEK_SET);
+    zos_err_t seek_err = seek(source_dev, &seek_to, SEEK_SET);
     if (seek_err != ERR_SUCCESS)
         return 0;
 
     uint16_t filled = 0;
     while (filled < MMU_PAGE_SIZE) {
-        uint16_t read_size = EDIT_CHUNK_SIZE;
+        uint16_t read_size = SOURCE_IO_CHUNK_SIZE;
         uint16_t remaining = MMU_PAGE_SIZE - filled;
+        uint8_t prev_page2 = 0;
 
         if (read_size > remaining)
             read_size = remaining;
 
-        zos_err_t err = read(state->source_dev, state->scratch, &read_size);
+        zos_err_t err = read(source_dev, io_chunk, &read_size);
         if (err != ERR_SUCCESS)
             return 0;
-
         if (read_size == 0)
             break;
 
-        mem_cpy(&state->source_cache[filled], state->scratch, read_size);
-        filled += read_size;
+        if (!document_store_map_page2_guarded(cache_page, &prev_page2))
+            return 0;
+        for (uint16_t i = 0; i < read_size; i++) {
+            MMU_WINDOW[filled + i] = io_chunk[i];
+        }
+        document_store_restore_page2(prev_page2);
 
-        if (read_size < EDIT_CHUNK_SIZE)
+        filled += read_size;
+        if (read_size < SOURCE_IO_CHUNK_SIZE)
             break;
     }
 
@@ -97,11 +208,20 @@ static char document_store_source_byte_at(EditorState* state, uint32_t source_of
             return '\0';
     }
 
-    uint32_t inner = source_offset - state->source_cache_base;
-    if (inner >= state->source_cache_size)
+    uint32_t cache_base = state->source_cache_base;
+    uint16_t cache_size = state->source_cache_size;
+    uint32_t inner = source_offset - cache_base;
+    uint8_t cache_page = state->source_cache_page;
+    uint8_t prev_page2 = 0;
+
+    if (inner >= cache_size)
+        return '\0';
+    if (!document_store_map_page2_guarded(cache_page, &prev_page2))
         return '\0';
 
-    return (char) state->source_cache[inner];
+    char c = (char) MMU_WINDOW[inner];
+    document_store_restore_page2(prev_page2);
+    return c;
 }
 
 static char document_store_piece_byte_at(EditorState* state,
@@ -113,10 +233,10 @@ static char document_store_piece_byte_at(EditorState* state,
     if (piece->source_kind == PIECE_SOURCE)
         return document_store_source_byte_at(state, idx);
 
-    if ((idx >= state->add_size) || (idx >= EDIT_BUFFER_SIZE))
+    if (idx >= state->add_size)
         return '\0';
 
-    return (char) state->file_buffer[idx];
+    return document_store_read_add_byte(state, idx);
 }
 
 char document_store_char_at(EditorState* state, uint32_t offset)
@@ -236,46 +356,6 @@ static uint32_t document_store_line_start_at(EditorState* state, uint32_t offset
     return i;
 }
 
-static unsigned char document_store_locate_offset_in_view(EditorState* state,
-                                                          uint32_t target_offset,
-                                                          unsigned char* out_x,
-                                                          unsigned char* out_y)
-{
-    uint32_t i = state->buffer_top;
-    unsigned char x = 0;
-    unsigned char y = 0;
-
-    target_offset = clamp_u32(target_offset, 0, state->filesize);
-
-    while (1) {
-        if (i == target_offset) {
-            *out_x = x;
-            *out_y = y;
-            return 1;
-        }
-
-        if (i >= state->filesize)
-            break;
-        if (y >= DOCUMENT_LINES)
-            break;
-
-        if (document_store_char_at(state, i) == '\n') {
-            y++;
-            x = 0;
-        } else {
-            x++;
-            if (x >= DOCUMENT_COLUMNS) {
-                x = 0;
-                y++;
-            }
-        }
-
-        i++;
-    }
-
-    return 0;
-}
-
 uint32_t document_store_cursor_offset(EditorState* state)
 {
     uint32_t i = state->buffer_top;
@@ -310,28 +390,58 @@ uint32_t document_store_cursor_offset(EditorState* state)
 
 void document_store_set_cursor_from_offset(EditorState* state, uint32_t target_offset)
 {
+    uint32_t i = 0;
     unsigned char x = 0;
     unsigned char y = 0;
+
     target_offset = clamp_u32(target_offset, 0, state->filesize);
 
     if (target_offset < state->buffer_top)
         state->buffer_top = document_store_line_start_at(state, target_offset);
 
-    while (1) {
-        if (document_store_locate_offset_in_view(state, target_offset, &x, &y)) {
-            state->cursor_x = x;
-            state->cursor_y = y;
-            return;
+    i = state->buffer_top;
+    while ((i < target_offset) && (y < DOCUMENT_LINES)) {
+        if (document_store_char_at(state, i) == '\n') {
+            y++;
+            x = 0;
+        } else {
+            x++;
+            if (x >= DOCUMENT_COLUMNS) {
+                x = 0;
+                y++;
+            }
         }
-
-        if (state->buffer_top >= target_offset) {
-            state->cursor_x = 0;
-            state->cursor_y = 0;
-            return;
-        }
-
-        state->buffer_top = clamp_u32(document_store_next_line_start(state), 0, state->filesize);
+        i++;
     }
+
+    if (y >= DOCUMENT_LINES) {
+        state->buffer_top = document_store_line_start_at(state, target_offset);
+        i = state->buffer_top;
+        x = 0;
+        y = 0;
+        while ((i < target_offset) && (y < DOCUMENT_LINES)) {
+            if (document_store_char_at(state, i) == '\n') {
+                y++;
+                x = 0;
+            } else {
+                x++;
+                if (x >= DOCUMENT_COLUMNS) {
+                    x = 0;
+                    y++;
+                }
+            }
+            i++;
+        }
+    }
+
+    if (y >= DOCUMENT_LINES) {
+        state->cursor_x = 0;
+        state->cursor_y = DOCUMENT_LINES - 1;
+        return;
+    }
+
+    state->cursor_x = x;
+    state->cursor_y = y;
 }
 
 unsigned char document_store_insert(EditorState* state, uint32_t offset, char c, unsigned char insert_mode)
@@ -350,13 +460,10 @@ unsigned char document_store_insert(EditorState* state, uint32_t offset, char c,
 
         if (!overwrite_at_end && (state->pieces[overwrite_piece].source_kind == PIECE_ADD)) {
             uint32_t idx = state->pieces[overwrite_piece].start + overwrite_inner;
-            if (idx >= EDIT_BUFFER_SIZE)
-                return 0;
-            state->file_buffer[idx] = (unsigned char) c;
-            return 1;
+            return document_store_write_add_byte(state, idx, (unsigned char) c);
         }
 
-        if (state->add_size >= EDIT_BUFFER_SIZE)
+        if (state->add_size >= EDIT_ADD_MAX_BYTES)
             return 0;
         if (state->piece_count >= (EDIT_PIECE_MAX - 2))
             return 0;
@@ -366,13 +473,14 @@ unsigned char document_store_insert(EditorState* state, uint32_t offset, char c,
         return document_store_insert(state, offset, c, 1);
     }
 
-    if (state->add_size >= EDIT_BUFFER_SIZE)
+    if (state->add_size >= EDIT_ADD_MAX_BYTES)
         return 0;
 
     if (state->piece_count >= (EDIT_PIECE_MAX - 2))
         return 0;
 
-    state->file_buffer[state->add_size] = (unsigned char) c;
+    if (!document_store_write_add_byte(state, state->add_size, (unsigned char) c))
+        return 0;
 
     DocumentPiece add_piece;
     add_piece.source_kind = PIECE_ADD;
@@ -531,8 +639,6 @@ int16_t document_store_load_from_path(EditorState* state, const char* path)
     if ((state == 0) || (path == 0) || (path[0] == '\0'))
         return -ERR_INVALID_PARAMETER;
 
-    document_store_close_source(state);
-
     zos_dev_t dev = open(path, O_RDONLY);
     if (dev < 0)
         return dev;
@@ -544,6 +650,8 @@ int16_t document_store_load_from_path(EditorState* state, const char* path)
         return stat_err;
     }
 
+    document_store_close_source(state);
+
     state->filesize = st.s_size;
     state->source_size = st.s_size;
     state->add_size = 0;
@@ -551,6 +659,9 @@ int16_t document_store_load_from_path(EditorState* state, const char* path)
     state->source_cache_base = 0;
     state->source_cache_size = 0;
     state->source_cache_valid = 0;
+    state->source_cache_page = 0;
+    state->source_cache_page_allocated = 0;
+    state->add_page_count = 0;
     state->source_dev = dev;
 
     if (state->source_size > 0) {

@@ -7,10 +7,10 @@
 #include <windows.h>
 #include <zos_vfs.h>
 
-#define EDIT_BUFFER_SIZE (4 * KILOBYTE)
 #define EDIT_CHUNK_SIZE 1024
 #define EDIT_PATH_MAX 128
 #define EDIT_PIECE_MAX 768
+#define EDIT_ADD_PAGE_MAX 8
 
 typedef struct DocumentPiece {
     uint8_t source_kind;
@@ -37,12 +37,14 @@ typedef struct EditorState {
     uint16_t piece_count;
     DocumentPiece pieces[EDIT_PIECE_MAX];
     unsigned char scratch[EDIT_CHUNK_SIZE];
-    unsigned char source_cache[16 * KILOBYTE];
     uint32_t source_cache_base;
     uint16_t source_cache_size;
     unsigned char source_cache_valid;
+    uint8_t source_cache_page;
+    unsigned char source_cache_page_allocated;
+    uint8_t add_pages[EDIT_ADD_PAGE_MAX];
+    uint8_t add_page_count;
     zos_dev_t source_dev;
-    unsigned char file_buffer[EDIT_BUFFER_SIZE];
     uint32_t buffer_position;
     uint32_t buffer_top;
 

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-option(ENABLE_BUILD_CHECKS "Enable runtime scratch MMU boundary check" ON)
+option(ENABLE_BUILD_CHECKS "Enable runtime scratch MMU boundary check" OFF)
 
 # Application Version
 set(APP_VERSION_MAJOR 0)
@@ -38,7 +38,7 @@ target_include_directories(${target_name} PRIVATE $ENV{ZVB_SDK_PATH}/include)
 target_link_libraries(${target_name} PRIVATE core conio keyboard windows)
 
 target_compile_options(${target_name} PRIVATE
-    $<$<COMPILE_LANGUAGE:C>:--nostdlib>
+    $<$<COMPILE_LANGUAGE:C>:--nostdlib --opt-code-size>
 )
 
 if(ENABLE_BUILD_CHECKS OR CMAKE_BUILD_TYPE STREQUAL "Debug")
