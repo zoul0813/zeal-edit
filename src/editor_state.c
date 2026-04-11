@@ -57,6 +57,9 @@ void editor_state_init(EditorState* state, const char* path)
     state->filename = k_unnamed_title;
     state->status_text = k_status_ready;
     state->filesize = 0;
+    state->source_size = 0;
+    state->add_size = 0;
+    state->piece_count = 0;
 
     state->win_document.x = DOCUMENT_X;
     state->win_document.y = DOCUMENT_Y;

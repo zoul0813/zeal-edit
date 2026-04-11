@@ -26,6 +26,7 @@ static const char k_status_opened[] = "Opened";
 static const char k_status_open_cancelled[] = "Open cancelled";
 static const char k_status_open_empty[] = "Open cancelled: empty path";
 static const char k_status_open_failed[] = "Open failed";
+static const char k_status_open_too_large[] = "Open failed: file too large for buffer";
 static const char k_status_dirty_prompt_cancelled[] = "Open cancelled: unsaved changes kept";
 
 static EditorState g_editor_state;
@@ -186,6 +187,31 @@ static void apply_delete(EditorState* state)
     editor_ui_refresh(state);
 }
 
+static void snap_cursor_to_visible_content(EditorState* state)
+{
+    uint16_t offset = document_store_cursor_offset(state);
+    document_store_set_cursor_from_offset(state, offset);
+}
+
+static unsigned char cursor_is_at_line_end(EditorState* state)
+{
+    uint16_t offset = document_store_cursor_offset(state);
+    if (offset >= state->filesize)
+        return 1;
+    return (document_store_char_at(state, offset) == '\n');
+}
+
+static void move_cursor_to_line_end(EditorState* state)
+{
+    uint16_t offset = document_store_cursor_offset(state);
+    while (offset < state->filesize) {
+        if (document_store_char_at(state, offset) == '\n')
+            break;
+        offset++;
+    }
+    document_store_set_cursor_from_offset(state, offset);
+}
+
 static void apply_save(EditorState* state)
 {
     if (!state->has_named_path) {
@@ -239,8 +265,22 @@ static void apply_open(EditorState* state)
     }
     (void) close(preflight_dev);
 
-    if (document_store_load_from_path(state, state->prompt_storage) != 0) {
+    int16_t size_result = document_store_validate_path_size(state, state->prompt_storage);
+    if (size_result == DOCUMENT_STORE_ERR_FILE_TOO_LARGE) {
+        set_status_and_draw(state, k_status_open_too_large);
+        return;
+    }
+    if (size_result != 0) {
         set_status_and_draw(state, k_status_open_failed);
+        return;
+    }
+
+    int16_t load_result = document_store_load_from_path(state, state->prompt_storage);
+    if (load_result != 0) {
+        if (load_result == DOCUMENT_STORE_ERR_FILE_TOO_LARGE)
+            set_status_and_draw(state, k_status_open_too_large);
+        else
+            set_status_and_draw(state, k_status_open_failed);
         return;
     }
 
@@ -298,6 +338,7 @@ static unsigned char edit_loop(EditorState* state)
             state->buffer_top = 0;
             state->cursor_y = 0;
             state->cursor_x = 0;
+            snap_cursor_to_visible_content(state);
             editor_ui_refresh(state);
             break;
         case KB_END: {
@@ -308,6 +349,7 @@ static unsigned char edit_loop(EditorState* state)
             state->buffer_top = clamp(state->buffer_top, 0, state->filesize);
             state->cursor_x = 0;
             state->cursor_y = DOCUMENT_MAX_Y;
+            snap_cursor_to_visible_content(state);
             editor_ui_refresh(state);
         } break;
         case KB_PG_UP: {
@@ -315,35 +357,51 @@ static unsigned char edit_loop(EditorState* state)
                 state->buffer_top = document_store_previous_line_start(state);
             }
             state->buffer_top = clamp(state->buffer_top, 0, state->filesize);
+            snap_cursor_to_visible_content(state);
             editor_ui_refresh(state);
         } break;
         case KB_PG_DOWN:
             state->buffer_top = clamp(state->buffer_position + 1, 0, state->filesize);
+            snap_cursor_to_visible_content(state);
             editor_ui_refresh(state);
             break;
         case KB_UP_ARROW:
+            {
+                unsigned char was_at_eol = cursor_is_at_line_end(state);
             if (state->cursor_y >= 1) {
                 state->cursor_y--;
             } else if (state->buffer_top > 0) {
                 state->buffer_top = document_store_previous_line_start(state);
                 editor_ui_refresh(state);
             }
+            snap_cursor_to_visible_content(state);
+                if (was_at_eol)
+                    move_cursor_to_line_end(state);
+            }
             break;
         case KB_DOWN_ARROW:
+            {
+                unsigned char was_at_eol = cursor_is_at_line_end(state);
             if (state->cursor_y < DOCUMENT_MAX_Y) {
                 state->cursor_y++;
             } else if (state->buffer_position < state->filesize) {
                 state->buffer_top = clamp(document_store_next_line_start(state), 0, state->filesize);
                 editor_ui_refresh(state);
             }
+            snap_cursor_to_visible_content(state);
+                if (was_at_eol)
+                    move_cursor_to_line_end(state);
+            }
             break;
         case KB_LEFT_ARROW:
             if (state->cursor_x >= 1)
                 state->cursor_x--;
+            snap_cursor_to_visible_content(state);
             break;
         case KB_RIGHT_ARROW:
             if (state->cursor_x < DOCUMENT_MAX_X)
                 state->cursor_x++;
+            snap_cursor_to_visible_content(state);
             break;
 
         /* Printable/translated character input */
@@ -366,6 +424,25 @@ void edit(const char* path)
     editor_state_init(state, path);
 
     if ((path != 0) && (path[0] != '\0')) {
+        int16_t size_result = document_store_validate_path_size(state, path);
+        if (size_result == DOCUMENT_STORE_ERR_FILE_TOO_LARGE) {
+            put_s("File too large for current edit buffer\n");
+            exit(ERR_FAILURE);
+        }
+        if (size_result != 0) {
+            if (size_result < 0) {
+                put_s("Failed to open file ");
+                put_u8((uint8_t) -size_result);
+                put_c(CH_NEWLINE);
+                exit((uint8_t) -size_result);
+            }
+
+            put_s("Failed to read file ");
+            put_u8((uint8_t) size_result);
+            put_c(CH_NEWLINE);
+            exit((uint8_t) size_result);
+        }
+
         int16_t load_result = document_store_load_from_path(state, path);
         if (load_result != 0) {
 #ifdef BUILD_VERIFY
@@ -374,6 +451,10 @@ void edit(const char* path)
                 exit(ERR_INVALID_PARAMETER);
             }
 #endif
+            if (load_result == DOCUMENT_STORE_ERR_FILE_TOO_LARGE) {
+                put_s("File too large for current edit buffer\n");
+                exit(ERR_FAILURE);
+            }
             if (load_result < 0) {
                 put_s("Failed to open file ");
                 put_u8((uint8_t) -load_result);

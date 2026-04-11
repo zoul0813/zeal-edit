@@ -3,6 +3,7 @@
 #include <windows.h>
 #include <conio.h>
 
+#include "document_store.h"
 #include "editor_ui.h"
 
 #define DOCUMENT_Y 1
@@ -48,7 +49,7 @@ void editor_ui_draw_document(EditorState* state)
     unsigned char lines = 0;
 
     for (i = state->buffer_position; i < state->filesize; i++) {
-        char c = state->file_buffer[i];
+        char c = document_store_char_at(state, i);
         if (c == '\n') {
             window_clreol(&state->win_document);
             lines++;
