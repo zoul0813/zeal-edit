@@ -13,6 +13,8 @@
 
 #define DOCUMENT_X 0
 #define DOCUMENT_Y 1
+#define DOCUMENT_MAX_X (SCREEN_COL80_WIDTH - 1 - (DOCUMENT_X + 2))
+#define DOCUMENT_MAX_Y (SCREEN_COL80_HEIGHT - 1 - (DOCUMENT_Y + 2))
 
 static EditorState g_editor_state;
 
@@ -23,10 +25,95 @@ static void reset_startup_screen_state(void)
     gotoxy(0, 0);
 }
 
+static unsigned char key_is_backspace(kb_keys_t key)
+{
+    if (key == 0x08)
+        return 1;
+#ifdef KB_BACKSPACE
+    if (key == KB_BACKSPACE)
+        return 1;
+#endif
+    return 0;
+}
+
+static unsigned char key_is_delete(kb_keys_t key)
+{
+#ifdef KB_DELETE
+    if (key == KB_DELETE)
+        return 1;
+#endif
+#ifdef KB_DEL
+    if (key == KB_DEL)
+        return 1;
+#endif
+    return (key == 0x7F);
+}
+
+static unsigned char key_is_enter(kb_keys_t key)
+{
+    if ((key == 0x0A) || (key == 0x0D))
+        return 1;
+#ifdef KB_ENTER
+    if (key == KB_ENTER)
+        return 1;
+#endif
+#ifdef KB_RETURN
+    if (key == KB_RETURN)
+        return 1;
+#endif
+    return 0;
+}
+
+static unsigned char key_to_insert_char(kb_keys_t key, char* out_char)
+{
+    if (key_is_enter(key)) {
+        *out_char = '\n';
+        return 1;
+    }
+
+    if ((key >= 0x20) && (key <= 0x7E)) {
+        *out_char = (char) key;
+        return 1;
+    }
+
+    return 0;
+}
+
+static void apply_insert(EditorState* state, char c)
+{
+    uint16_t offset = document_store_cursor_offset(state);
+    if (!document_store_insert(state, offset, c, state->insert_mode))
+        return;
+
+    state->dirty = 1;
+    document_store_set_cursor_from_offset(state, offset + 1);
+    editor_ui_refresh(state);
+}
+
+static void apply_backspace(EditorState* state)
+{
+    uint16_t offset = document_store_cursor_offset(state);
+    if (!document_store_backspace(state, offset))
+        return;
+
+    state->dirty = 1;
+    document_store_set_cursor_from_offset(state, offset - 1);
+    editor_ui_refresh(state);
+}
+
+static void apply_delete(EditorState* state)
+{
+    uint16_t offset = document_store_cursor_offset(state);
+    if (!document_store_delete(state, offset))
+        return;
+
+    state->dirty = 1;
+    document_store_set_cursor_from_offset(state, offset);
+    editor_ui_refresh(state);
+}
+
 static unsigned char edit_loop(EditorState* state)
 {
-    if (state->meta_open)
-        editor_ui_draw_bottomenu(state);
     if (state->dialog_open)
         editor_ui_draw_dialog(state);
 
@@ -42,8 +129,8 @@ static unsigned char edit_loop(EditorState* state)
                 editor_ui_redraw(state);
             break;
         case KB_INSERT:
-            state->meta_open ^= 1;
-            editor_ui_redraw(state);
+            state->insert_mode ^= 1;
+            editor_ui_draw_bottomenu(state);
             break;
         case KB_HOME:
             state->buffer_top = 0;
@@ -58,7 +145,7 @@ static unsigned char edit_loop(EditorState* state)
             }
             state->buffer_top = clamp(state->buffer_top, 0, state->filesize);
             state->cursor_x = 0;
-            state->cursor_y = (SCREEN_COL80_HEIGHT - 1 - (DOCUMENT_Y + 2));
+            state->cursor_y = DOCUMENT_MAX_Y;
             editor_ui_refresh(state);
         } break;
         case KB_PG_UP: {
@@ -81,7 +168,7 @@ static unsigned char edit_loop(EditorState* state)
             }
             break;
         case KB_DOWN_ARROW:
-            if (state->cursor_y < (SCREEN_COL80_HEIGHT - 1 - (DOCUMENT_Y + 2))) {
+            if (state->cursor_y < DOCUMENT_MAX_Y) {
                 state->cursor_y++;
             } else if (state->buffer_position < state->filesize) {
                 state->buffer_top = clamp(document_store_next_line_start(state), 0, state->filesize);
@@ -93,9 +180,19 @@ static unsigned char edit_loop(EditorState* state)
                 state->cursor_x--;
             break;
         case KB_RIGHT_ARROW:
-            if (state->cursor_x < (SCREEN_COL80_WIDTH - 1 - (DOCUMENT_X + 2)))
+            if (state->cursor_x < DOCUMENT_MAX_X)
                 state->cursor_x++;
             break;
+        default: {
+            char c = 0;
+            if (key_is_backspace(key)) {
+                apply_backspace(state);
+            } else if (key_is_delete(key)) {
+                apply_delete(state);
+            } else if (key_to_insert_char(key, &c)) {
+                apply_insert(state, c);
+            }
+        } break;
     }
 
     return 0;

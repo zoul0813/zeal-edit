@@ -16,6 +16,8 @@ void editor_state_init(EditorState* state, const char* path)
     state->cursor_y = 0;
     state->dialog_open = 0;
     state->meta_open = 0;
+    state->insert_mode = 1;
+    state->dirty = 0;
 
     state->filename = title;
     state->filesize = 0;

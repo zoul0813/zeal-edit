@@ -8,6 +8,17 @@
 #define DOCUMENT_Y 1
 #define DOCUMENT_LINES (SCREEN_COL80_HEIGHT - DOCUMENT_Y - 2)
 
+static void status_append(char* dst, unsigned char* offset, const char* src)
+{
+    if (src == 0)
+        return;
+    while ((*src != '\0') && (*offset < 79)) {
+        dst[*offset] = *src;
+        (*offset)++;
+        src++;
+    }
+}
+
 void editor_ui_draw_topmenu(void)
 {
     uint8_t c = COLOR(TEXT_COLOR_BLACK, TEXT_COLOR_LIGHT_GRAY);
@@ -17,7 +28,15 @@ void editor_ui_draw_topmenu(void)
 void editor_ui_draw_bottomenu(const EditorState* state)
 {
     char text[80] = { 0 };
-    (void) state;
+    unsigned char pos = 0;
+
+    status_append(text, &pos, " ");
+    status_append(text, &pos, state->filename);
+    status_append(text, &pos, " ");
+    status_append(text, &pos, state->dirty ? "*" : "-");
+    status_append(text, &pos, " ");
+    status_append(text, &pos, state->insert_mode ? "INS" : "OVR");
+
     uint8_t c = COLOR(TEXT_COLOR_CYAN, TEXT_COLOR_BLACK);
     text_menu(0, SCREEN_COL80_HEIGHT - 1, c, text);
 }
@@ -66,9 +85,11 @@ void editor_ui_redraw(EditorState* state)
     editor_ui_draw_topmenu();
     window(&state->win_document);
     editor_ui_draw_document(state);
+    editor_ui_draw_bottomenu(state);
 }
 
 void editor_ui_refresh(EditorState* state)
 {
     editor_ui_draw_document(state);
+    editor_ui_draw_bottomenu(state);
 }

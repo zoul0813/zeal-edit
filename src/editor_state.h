@@ -14,6 +14,8 @@ typedef struct EditorState {
     unsigned char cursor_y;
     unsigned char dialog_open;
     unsigned char meta_open;
+    unsigned char insert_mode;
+    unsigned char dirty;
 
     const char* filename;
     uint16_t filesize;
