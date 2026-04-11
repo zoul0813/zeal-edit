@@ -23,7 +23,7 @@ static void status_append(char* dst, unsigned char* offset, const char* src)
 
 void editor_ui_draw_topmenu(void)
 {
-    text_menu(0, 0, g_editor_menu_color, "  Esc=Quit Home/End,PgUp/PgDn,Arrows=Move");
+    text_menu(0, 0, g_editor_menu_color, "  F2=Save Esc=Quit Home/End,PgUp/PgDn,Arrows=Move");
 }
 
 void editor_ui_draw_bottomenu(const EditorState* state)
@@ -33,6 +33,8 @@ void editor_ui_draw_bottomenu(const EditorState* state)
 
     status_append(text, &pos, state->dirty ? " * " : " - ");
     status_append(text, &pos, state->insert_mode ? "[ INSERT ]" : "[ OVER ]");
+    status_append(text, &pos, " | ");
+    status_append(text, &pos, state->status_text);
 
     text_banner(0, SCREEN_COL80_HEIGHT - 1, g_editor_menu_color, 0, text);
 }

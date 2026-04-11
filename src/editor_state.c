@@ -5,12 +5,17 @@
 #define DOCUMENT_X 0
 #define DOCUMENT_Y 1
 static const char k_unnamed_title[] = "<unnamed>";
+static const char k_status_ready[] = "Ready";
 
 void editor_state_init(EditorState* state, const char* path)
 {
     const char* title = path;
+    unsigned char has_path = 1;
     if ((title == 0) || (title[0] == '\0'))
+    {
         title = k_unnamed_title;
+        has_path = 0;
+    }
 
     state->cursor_x = 0;
     state->cursor_y = 0;
@@ -18,8 +23,10 @@ void editor_state_init(EditorState* state, const char* path)
     state->meta_open = 0;
     state->insert_mode = 1;
     state->dirty = 0;
+    state->has_named_path = has_path;
 
     state->filename = title;
+    state->status_text = k_status_ready;
     state->filesize = 0;
     state->buffer_position = 0;
     state->buffer_top = 0;

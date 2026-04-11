@@ -1,3 +1,4 @@
+type a few chars
 Alpha line 01
 Bravo line 02
 Charlie line 03

@@ -16,8 +16,10 @@ typedef struct EditorState {
     unsigned char meta_open;
     unsigned char insert_mode;
     unsigned char dirty;
+    unsigned char has_named_path;
 
     const char* filename;
+    const char* status_text;
     uint16_t filesize;
     unsigned char scratch[EDIT_CHUNK_SIZE];
     unsigned char file_buffer[EDIT_BUFFER_SIZE];

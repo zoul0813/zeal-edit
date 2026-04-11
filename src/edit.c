@@ -17,6 +17,12 @@
 #define DOCUMENT_LINES (SCREEN_COL80_HEIGHT - DOCUMENT_Y - 3)
 #define DOCUMENT_MAX_Y (DOCUMENT_LINES - 1)
 
+static const char k_status_modified[] = "Modified";
+static const char k_status_saved[] = "Saved";
+static const char k_status_save_needs_name[] = "Save needs filename (Task 6: Open/Save-As)";
+static const char k_status_save_open_failed[] = "Save failed: open/truncate";
+static const char k_status_save_write_failed[] = "Save failed: write/close";
+
 static EditorState g_editor_state;
 
 static void reset_startup_screen_state(void)
@@ -38,6 +44,7 @@ static void apply_insert(EditorState* state, char c)
         return;
 
     state->dirty = 1;
+    state->status_text = k_status_modified;
     document_store_set_cursor_from_offset(state, offset + 1);
     editor_ui_refresh(state);
 }
@@ -49,6 +56,7 @@ static void apply_backspace(EditorState* state)
         return;
 
     state->dirty = 1;
+    state->status_text = k_status_modified;
     document_store_set_cursor_from_offset(state, offset - 1);
     editor_ui_refresh(state);
 }
@@ -60,8 +68,30 @@ static void apply_delete(EditorState* state)
         return;
 
     state->dirty = 1;
+    state->status_text = k_status_modified;
     document_store_set_cursor_from_offset(state, offset);
     editor_ui_refresh(state);
+}
+
+static void apply_save(EditorState* state)
+{
+    if (!state->has_named_path) {
+        state->status_text = k_status_save_needs_name;
+        editor_ui_draw_bottomenu(state);
+        return;
+    }
+
+    int16_t save_result = document_store_save_to_path(state, state->filename);
+    if (save_result == 0) {
+        state->dirty = 0;
+        state->status_text = k_status_saved;
+    } else if (save_result < 0) {
+        state->status_text = k_status_save_open_failed;
+    } else {
+        state->status_text = k_status_save_write_failed;
+    }
+
+    editor_ui_draw_bottomenu(state);
 }
 
 static unsigned char edit_loop(EditorState* state)
@@ -83,6 +113,9 @@ static unsigned char edit_loop(EditorState* state)
             state->dialog_open ^= 1;
             if (!state->dialog_open)
                 editor_ui_redraw(state);
+            break;
+        case KB_F2:
+            apply_save(state);
             break;
 
         /* Editing mode and mutation keys */
@@ -194,6 +227,8 @@ void edit(const char* path)
             exit((uint8_t) load_result);
         }
     }
+
+    state->status_text = "Ready";
 
     setcursortype(177);
     cursor(1);

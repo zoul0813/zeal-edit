@@ -14,5 +14,6 @@ unsigned char document_store_delete(EditorState* state, uint16_t cursor_offset);
 uint16_t document_store_previous_line_start(EditorState* state);
 uint16_t document_store_next_line_start(const EditorState* state);
 int16_t document_store_load_from_path(EditorState* state, const char* path);
+int16_t document_store_save_to_path(EditorState* state, const char* path);
 
 #endif

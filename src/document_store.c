@@ -241,3 +241,51 @@ int16_t document_store_load_from_path(EditorState* state, const char* path)
     close(dev);
     return 0;
 }
+
+int16_t document_store_save_to_path(EditorState* state, const char* path)
+{
+    if ((path == 0) || (path[0] == '\0'))
+        return -ERR_INVALID_PARAMETER;
+
+    zos_dev_t dev = open(path, O_WRONLY | O_CREAT | O_TRUNC);
+    if (dev < 0)
+        return dev;
+
+#ifdef BUILD_VERIFY
+    /* write() rejects buffers that cross an MMU page boundary */
+    uint16_t scratch_addr = (uint16_t) state->scratch;
+    if (((scratch_addr & (MMU_PAGE_SIZE - 1)) + EDIT_CHUNK_SIZE) > MMU_PAGE_SIZE) {
+        close(dev);
+        return -ERR_INVALID_PARAMETER;
+    }
+#endif
+
+    uint16_t offset = 0;
+    while (offset < state->filesize) {
+        uint16_t chunk_size = state->filesize - offset;
+        if (chunk_size > EDIT_CHUNK_SIZE)
+            chunk_size = EDIT_CHUNK_SIZE;
+
+        mem_cpy(state->scratch, &state->file_buffer[offset], chunk_size);
+
+        uint16_t written = chunk_size;
+        zos_err_t err = write(dev, state->scratch, &written);
+        if (err != ERR_SUCCESS) {
+            close(dev);
+            return err;
+        }
+
+        if (written == 0) {
+            close(dev);
+            return ERR_FAILURE;
+        }
+
+        offset += written;
+    }
+
+    zos_err_t close_err = close(dev);
+    if (close_err != ERR_SUCCESS)
+        return close_err;
+
+    return 0;
+}
