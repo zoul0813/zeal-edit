@@ -27,7 +27,7 @@ void editor_state_init(EditorState* state, const char* path)
     state->win_document.x = DOCUMENT_X;
     state->win_document.y = DOCUMENT_Y;
     state->win_document.w = SCREEN_COL80_WIDTH;
-    state->win_document.h = SCREEN_COL80_HEIGHT - DOCUMENT_Y;
+    state->win_document.h = SCREEN_COL80_HEIGHT - DOCUMENT_Y - 1;
     state->win_document.fg = TEXT_COLOR_WHITE;
     state->win_document.bg = TEXT_COLOR_DARK_BLUE;
     state->win_document.flags = WIN_BORDER;

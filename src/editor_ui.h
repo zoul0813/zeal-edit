@@ -1,7 +1,11 @@
 #ifndef EDITOR_UI_H
 #define EDITOR_UI_H
 
+#include <stdint.h>
+
 #include "editor_state.h"
+
+extern uint8_t g_editor_menu_color;
 
 void editor_ui_draw_topmenu(void);
 void editor_ui_draw_bottomenu(const EditorState* state);

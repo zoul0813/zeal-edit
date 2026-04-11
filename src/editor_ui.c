@@ -6,7 +6,9 @@
 #include "editor_ui.h"
 
 #define DOCUMENT_Y 1
-#define DOCUMENT_LINES (SCREEN_COL80_HEIGHT - DOCUMENT_Y - 2)
+#define DOCUMENT_LINES (SCREEN_COL80_HEIGHT - DOCUMENT_Y - 3)
+
+uint8_t g_editor_menu_color = COLOR(TEXT_COLOR_BLACK, TEXT_COLOR_LIGHT_GRAY);
 
 static void status_append(char* dst, unsigned char* offset, const char* src)
 {
@@ -21,8 +23,7 @@ static void status_append(char* dst, unsigned char* offset, const char* src)
 
 void editor_ui_draw_topmenu(void)
 {
-    uint8_t c = COLOR(TEXT_COLOR_BLACK, TEXT_COLOR_LIGHT_GRAY);
-    text_menu(0, 0, c, "  Esc=Quit Home/End,PgUp/PgDn,Arrows=Move");
+    text_menu(0, 0, g_editor_menu_color, "  Esc=Quit Home/End,PgUp/PgDn,Arrows=Move");
 }
 
 void editor_ui_draw_bottomenu(const EditorState* state)
@@ -30,15 +31,10 @@ void editor_ui_draw_bottomenu(const EditorState* state)
     char text[80] = { 0 };
     unsigned char pos = 0;
 
-    status_append(text, &pos, " ");
-    status_append(text, &pos, state->filename);
-    status_append(text, &pos, " ");
-    status_append(text, &pos, state->dirty ? "*" : "-");
-    status_append(text, &pos, " ");
-    status_append(text, &pos, state->insert_mode ? "INS" : "OVR");
+    status_append(text, &pos, state->dirty ? " * " : " - ");
+    status_append(text, &pos, state->insert_mode ? "[ INSERT ]" : "[ OVER ]");
 
-    uint8_t c = COLOR(TEXT_COLOR_CYAN, TEXT_COLOR_BLACK);
-    text_menu(0, SCREEN_COL80_HEIGHT - 1, c, text);
+    text_banner(0, SCREEN_COL80_HEIGHT - 1, g_editor_menu_color, 0, text);
 }
 
 void editor_ui_draw_document(EditorState* state)

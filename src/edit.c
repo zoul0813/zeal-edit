@@ -14,7 +14,8 @@
 #define DOCUMENT_X 0
 #define DOCUMENT_Y 1
 #define DOCUMENT_MAX_X (SCREEN_COL80_WIDTH - 1 - (DOCUMENT_X + 2))
-#define DOCUMENT_MAX_Y (SCREEN_COL80_HEIGHT - 1 - (DOCUMENT_Y + 2))
+#define DOCUMENT_LINES (SCREEN_COL80_HEIGHT - DOCUMENT_Y - 3)
+#define DOCUMENT_MAX_Y (DOCUMENT_LINES - 1)
 
 static EditorState g_editor_state;
 
@@ -25,58 +26,9 @@ static void reset_startup_screen_state(void)
     gotoxy(0, 0);
 }
 
-static unsigned char key_is_backspace(kb_keys_t key)
+static unsigned char is_printable(unsigned char c)
 {
-    if (key == 0x08)
-        return 1;
-#ifdef KB_BACKSPACE
-    if (key == KB_BACKSPACE)
-        return 1;
-#endif
-    return 0;
-}
-
-static unsigned char key_is_delete(kb_keys_t key)
-{
-#ifdef KB_DELETE
-    if (key == KB_DELETE)
-        return 1;
-#endif
-#ifdef KB_DEL
-    if (key == KB_DEL)
-        return 1;
-#endif
-    return (key == 0x7F);
-}
-
-static unsigned char key_is_enter(kb_keys_t key)
-{
-    if ((key == 0x0A) || (key == 0x0D))
-        return 1;
-#ifdef KB_ENTER
-    if (key == KB_ENTER)
-        return 1;
-#endif
-#ifdef KB_RETURN
-    if (key == KB_RETURN)
-        return 1;
-#endif
-    return 0;
-}
-
-static unsigned char key_to_insert_char(kb_keys_t key, char* out_char)
-{
-    if (key_is_enter(key)) {
-        *out_char = '\n';
-        return 1;
-    }
-
-    if ((key >= 0x20) && (key <= 0x7E)) {
-        *out_char = (char) key;
-        return 1;
-    }
-
-    return 0;
+    return ((c >= 0x20) && (c <= 0x7E));
 }
 
 static void apply_insert(EditorState* state, char c)
@@ -120,7 +72,11 @@ static unsigned char edit_loop(EditorState* state)
     gotoxy(state->cursor_x + (DOCUMENT_X + 1), state->cursor_y + (DOCUMENT_Y + 1));
 
     kb_keys_t key = getkey();
+    if (key == 0)
+        return 0;
+
     switch (key) {
+        /* Session and UI controls */
         case KB_ESC:
             return 1;
         case KB_F1:
@@ -128,10 +84,23 @@ static unsigned char edit_loop(EditorState* state)
             if (!state->dialog_open)
                 editor_ui_redraw(state);
             break;
+
+        /* Editing mode and mutation keys */
         case KB_INSERT:
             state->insert_mode ^= 1;
             editor_ui_draw_bottomenu(state);
             break;
+        case KB_KEY_BACKSPACE:
+            apply_backspace(state);
+            break;
+        case KB_DELETE:
+            apply_delete(state);
+            break;
+        case KB_KEY_ENTER:
+            apply_insert(state, '\n');
+            break;
+
+        /* Navigation keys */
         case KB_HOME:
             state->buffer_top = 0;
             state->cursor_y = 0;
@@ -140,7 +109,7 @@ static unsigned char edit_loop(EditorState* state)
             break;
         case KB_END: {
             state->buffer_top = state->filesize;
-            for (unsigned char i = 0; i < (SCREEN_COL80_HEIGHT - DOCUMENT_Y - 2); i++) {
+            for (unsigned char i = 0; i < DOCUMENT_LINES; i++) {
                 state->buffer_top = document_store_previous_line_start(state);
             }
             state->buffer_top = clamp(state->buffer_top, 0, state->filesize);
@@ -149,7 +118,7 @@ static unsigned char edit_loop(EditorState* state)
             editor_ui_refresh(state);
         } break;
         case KB_PG_UP: {
-            for (unsigned char i = 0; i < (SCREEN_COL80_HEIGHT - DOCUMENT_Y - 2); i++) {
+            for (unsigned char i = 0; i < DOCUMENT_LINES; i++) {
                 state->buffer_top = document_store_previous_line_start(state);
             }
             state->buffer_top = clamp(state->buffer_top, 0, state->filesize);
@@ -183,15 +152,12 @@ static unsigned char edit_loop(EditorState* state)
             if (state->cursor_x < DOCUMENT_MAX_X)
                 state->cursor_x++;
             break;
+
+        /* Printable/translated character input */
         default: {
-            char c = 0;
-            if (key_is_backspace(key)) {
-                apply_backspace(state);
-            } else if (key_is_delete(key)) {
-                apply_delete(state);
-            } else if (key_to_insert_char(key, &c)) {
-                apply_insert(state, c);
-            }
+            unsigned char ch = getch(key);
+            if (is_printable(ch))
+                apply_insert(state, (char) ch);
         } break;
     }
 
