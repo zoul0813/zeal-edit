@@ -29,7 +29,10 @@ project(${target_name} C ASM)
 
 add_executable(${target_name}
 "src/main.c"
-"src/edit.c")
+"src/edit.c"
+"src/editor_state.c"
+"src/document_store.c"
+"src/editor_ui.c")
 
 target_include_directories(${target_name} PRIVATE $ENV{ZVB_SDK_PATH}/include)
 target_link_libraries(${target_name} PRIVATE core conio keyboard windows)
