@@ -1,5 +1,6 @@
 /bin
 /build
+/debug
 /lib
 /release
 /tmp

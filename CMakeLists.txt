@@ -43,3 +43,22 @@ if(ENABLE_BUILD_CHECKS OR CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif()
 
 zos_add_outputs(${target_name})
+# zos_add_outputs(${target_name} WITH_EXTENSION "")
+
+add_custom_command(TARGET ${target_name}_bin POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/debug
+    COMMAND ${CMAKE_COMMAND} -E rename
+        ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${target_name}.cdb
+        ${CMAKE_SOURCE_DIR}/debug/${target_name}.cdb
+    COMMAND ${CMAKE_COMMAND} -E rename
+        ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${target_name}.map
+        ${CMAKE_SOURCE_DIR}/debug/${target_name}.map
+    COMMAND ${CMAKE_COMMAND} -E rename
+        ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${target_name}.ihx
+        ${CMAKE_SOURCE_DIR}/debug/${target_name}.ihx
+    COMMAND ${CMAKE_COMMAND} -E rename
+        ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${target_name}.bin
+        ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${target_name}
+    COMMENT "Moving debug files to debug directory and stripping .bin extension"
+    VERBATIM
+)
