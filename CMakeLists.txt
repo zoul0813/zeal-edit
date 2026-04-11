@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
+option(ENABLE_BUILD_CHECKS "Enable runtime scratch MMU boundary check" ON)
+
 # Application Version
 set(APP_VERSION_MAJOR 0)
 set(APP_VERSION_MINOR 2)
@@ -25,7 +27,6 @@ find_package(COREUTILS REQUIRED)
 
 project(${target_name} C ASM)
 
-
 add_executable(${target_name}
 "src/main.c"
 "src/edit.c")
@@ -36,5 +37,9 @@ target_link_libraries(${target_name} PRIVATE core conio keyboard windows)
 target_compile_options(${target_name} PRIVATE
     $<$<COMPILE_LANGUAGE:C>:--nostdlib>
 )
+
+if(ENABLE_BUILD_CHECKS OR CMAKE_BUILD_TYPE STREQUAL "Debug")
+    target_compile_definitions(${target_name} PRIVATE BUILD_VERIFY=1)
+endif()
 
 zos_add_outputs(${target_name})

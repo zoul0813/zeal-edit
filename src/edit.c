@@ -13,7 +13,11 @@
 
 #define BUFFER_SIZE 32 * KILOBYTE
 
+#define MMU_PAGE_SIZE 0x4000
 #define CHUNK_SIZE 1024
+#if CHUNK_SIZE > MMU_PAGE_SIZE
+#error "CHUNK_SIZE must not exceed MMU_PAGE_SIZE"
+#endif
 #define DOCUMENT_X 0
 #define DOCUMENT_Y 1
 #define DOCUMENT_LINES SCREEN_COL80_HEIGHT - DOCUMENT_Y - 2
@@ -24,6 +28,7 @@ unsigned char dialog_open, meta_open;
 
 const char* filename;
 uint16_t filesize;
+unsigned char scratch[CHUNK_SIZE];
 unsigned char file_buffer[BUFFER_SIZE];
 uint16_t buffer_position;
 uint16_t buffer_top;
@@ -249,18 +254,38 @@ void edit(const char* path)
         exit(-dev);
     }
 
-    uint16_t size = CHUNK_SIZE;
-    filesize      = 0;
+#ifdef BUILD_VERIFY
+    /* read() rejects buffers that cross an MMU page boundary */
+    uint16_t scratch_addr = (uint16_t) scratch;
+    if (((scratch_addr & (MMU_PAGE_SIZE - 1)) + CHUNK_SIZE) > MMU_PAGE_SIZE) {
+        put_s("Scratch buffer crosses MMU page boundary\n");
+        exit(ERR_INVALID_PARAMETER);
+    }
+#endif
+
+    filesize = 0;
+    uint16_t read_size = 0;
     do {
-        zos_err_t err = read(dev, &file_buffer[filesize], &size);
+        uint16_t remaining = BUFFER_SIZE - filesize;
+        if (remaining == 0) {
+            read_size = 0;
+            break;
+        }
+        read_size = CHUNK_SIZE;
+        if (read_size > remaining)
+            read_size = remaining;
+        zos_err_t err = read(dev, scratch, &read_size);
         if (err != ERR_SUCCESS) {
             put_s("Failed to read file ");
             put_u8(err);
             put_c(CH_NEWLINE);
             exit(err);
         }
-        filesize += size;
-    } while (size == CHUNK_SIZE);
+        if (read_size == 0)
+            break;
+        mem_cpy(&file_buffer[filesize], scratch, read_size);
+        filesize += read_size;
+    } while (read_size == CHUNK_SIZE);
     close(dev);
 
     setcursortype(177);
