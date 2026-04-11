@@ -60,6 +60,14 @@ void editor_ui_draw_document(EditorState* state)
             break;
     }
 
+    if (lines < DOCUMENT_LINES) {
+        window_clreol(&state->win_document);
+        for (unsigned char line = lines + 1; line < DOCUMENT_LINES; line++) {
+            window_gotoxy(&state->win_document, 0, line);
+            window_clreol(&state->win_document);
+        }
+    }
+
     cursor(cur);
     state->buffer_position = clamp(i, 0, state->filesize);
 }
